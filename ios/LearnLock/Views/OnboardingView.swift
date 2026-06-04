@@ -289,7 +289,7 @@ struct OnboardingView: View {
     private func Step1() -> some View {
         VStack(spacing: 0) {
             mascotBubble(text: "Hi I'm Yoko")
-            MascotGIF(url: mascotGIF(.happy), size: min(100, UIScreen.main.bounds.width * 0.6))
+            MascotGIF(url: mascotGIF(.happy), size: min(264, UIScreen.main.bounds.width * 0.6))
                 .padding(.top, 20)
         }
         .frame(maxWidth: .infinity)
