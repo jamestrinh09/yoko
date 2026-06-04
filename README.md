@@ -1,2 +1,0 @@
-# yoko
-Created by Rork
