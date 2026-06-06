@@ -19,11 +19,9 @@ struct AnimatedGIFView: UIViewRepresentable {
         view.contentMode = .scaleAspectFit
         view.clipsToBounds = true
         view.backgroundColor = .clear
-        // The previous WebKit renderer let the GIF sit inside a scaled-down web
-        // viewport, so artwork appeared well within its frame. A native
-        // scaleAspectFit fills the frame edge-to-edge and reads much larger, so
-        // shrink it back down to match the earlier on-screen footprint.
-        view.transform = CGAffineTransform(scaleX: 0.68, y: 0.68)
+        // Render the GIF at 100% so it fills its frame edge-to-edge with no
+        // internal padding. The overall on-screen footprint is controlled by the
+        // reduced frame size in MascotGIF instead of an extra view transform.
         view.load(urlString)
         return view
     }
