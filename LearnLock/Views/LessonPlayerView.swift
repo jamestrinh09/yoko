@@ -117,7 +117,7 @@ struct LessonPlayerView: View {
 
             // Mascot centered in hero area
             mascotImage(urlString: mascotURL)
-                .frame(width: 164, height: 164)
+                .frame(width: 49, height: 49)
                 .padding(.top, 1)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 

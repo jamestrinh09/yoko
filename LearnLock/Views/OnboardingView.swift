@@ -289,7 +289,7 @@ struct OnboardingView: View {
     private func Step1() -> some View {
         VStack(spacing: 0) {
             mascotBubble(text: "Hi I'm Yoko")
-            MascotGIF(url: mascotGIF(.happy), size: min(264, UIScreen.main.bounds.width * 0.6))
+            MascotGIF(url: mascotGIF(.happy), size: min(79, UIScreen.main.bounds.width * 0.18))
                 .padding(.top, 20)
         }
         .frame(maxWidth: .infinity)
@@ -352,7 +352,7 @@ struct OnboardingView: View {
 
     private func Step4() -> some View {
         VStack(alignment: .leading, spacing: 24) {
-            MascotGIF(url: mascotGIF(.thinking), size: 176)
+            MascotGIF(url: mascotGIF(.thinking), size: 53)
                 .frame(maxWidth: .infinity)
             Text("Who are we helping?")
                 .font(.dsTitle)
@@ -522,7 +522,7 @@ struct OnboardingView: View {
 
     private func Step9() -> some View {
         VStack(alignment: .leading, spacing: 24) {
-            MascotGIF(url: mascotGIF(.determined), size: 176)
+            MascotGIF(url: mascotGIF(.determined), size: 53)
                 .frame(maxWidth: .infinity)
             Text("That adds up fast.")
                 .font(.dsTitle)
@@ -674,7 +674,7 @@ struct OnboardingView: View {
         VStack(spacing: 24) {
             MascotGIF(
                 url: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/LearnLock/GlassesGIF.gif",
-                size: 200
+                size: 60
             )
                 .frame(maxWidth: .infinity)
 
@@ -748,7 +748,7 @@ struct OnboardingView: View {
     private func Step18() -> some View {
         VStack(spacing: 18) {
             Color.clear.frame(height: 0)
-            MascotGIF(url: mascotGIF(.excited), size: 180)
+            MascotGIF(url: mascotGIF(.excited), size: 54)
                 .frame(maxWidth: .infinity)
 
             Text("1")
@@ -796,7 +796,7 @@ struct OnboardingView: View {
 
     private func Step19() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            MascotGIF(url: mascotGIF(.proud), size: 160)
+            MascotGIF(url: mascotGIF(.proud), size: 48)
                 .frame(maxWidth: .infinity)
             Text("Set the unlock rule.")
                 .font(.dsTitle)
@@ -913,7 +913,7 @@ struct OnboardingView: View {
     private func Step22() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            MascotGIF(url: mascotGIF(.determined), size: 150)
+            MascotGIF(url: mascotGIF(.determined), size: 45)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
@@ -970,7 +970,7 @@ struct OnboardingView: View {
     private func Step23() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            MascotGIF(url: mascotGIF(.proud), size: 150)
+            MascotGIF(url: mascotGIF(.proud), size: 45)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
@@ -1142,7 +1142,7 @@ struct DemoQuestionScreen: View {
                     VStack(spacing: 0) {
                         topBar
 
-                        MascotGIF(url: mascotURL, size: 164)
+                        MascotGIF(url: mascotURL, size: 49)
                             .padding(.top, -3)
                             .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
@@ -1409,7 +1409,7 @@ struct PlanCreationView: View {
 
     var body: some View {
         VStack(spacing: 22) {
-            MascotGIF(url: planMascotURL, size: 160)
+            MascotGIF(url: planMascotURL, size: 48)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 6) {
@@ -1542,7 +1542,7 @@ struct OnboardingDemoQuestion: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            MascotGIF(url: mascotURL, size: 120)
+            MascotGIF(url: mascotURL, size: 36)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 8)
 

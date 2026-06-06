@@ -58,7 +58,7 @@ struct LessonCompleteView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: geo.size.height * 0.05)
                     MascotGIFView(urlString: mascotURL)
-                        .frame(width: 132, height: 132)
+                        .frame(width: 40, height: 40)
                         .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
                     card
                 }

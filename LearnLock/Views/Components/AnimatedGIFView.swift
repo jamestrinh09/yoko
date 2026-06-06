@@ -19,9 +19,15 @@ struct AnimatedGIFView: UIViewRepresentable {
         view.contentMode = .scaleAspectFit
         view.clipsToBounds = true
         view.backgroundColor = .clear
-        // Render the GIF at 100% so it fills its frame edge-to-edge with no
-        // internal padding. The overall on-screen footprint is controlled by the
-        // reduced frame size in MascotGIF instead of an extra view transform.
+        // The decoded GIF has a large intrinsic size (e.g. 904x1016). Without
+        // dropping these priorities, Auto Layout forces the UIImageView to that
+        // intrinsic size and the SwiftUI .frame is ignored — which is why every
+        // size change previously had no visible effect. Letting the content
+        // hug/compress freely makes the SwiftUI frame authoritative.
+        view.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        view.setContentHuggingPriority(.defaultLow, for: .vertical)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
         view.load(urlString)
         return view
     }
@@ -29,10 +35,22 @@ struct AnimatedGIFView: UIViewRepresentable {
     func updateUIView(_ uiView: GIFImageView, context: Context) {
         uiView.load(urlString)
     }
+
+    /// Reports the exact size SwiftUI proposes (the `.frame`) instead of the
+    /// GIF's intrinsic pixel size, so the on-screen footprint always matches
+    /// the requested frame.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: GIFImageView, context: Context) -> CGSize? {
+        proposal.replacingUnspecifiedDimensions()
+    }
 }
 
 final class GIFImageView: UIImageView {
     private var currentURL: String?
+
+    // Returning a neutral intrinsic size prevents the large decoded GIF
+    // dimensions from inflating layout when the SwiftUI frame is the source of
+    // truth.
+    override var intrinsicContentSize: CGSize { .zero }
 
     func load(_ urlString: String) {
         guard currentURL != urlString else { return }
