@@ -656,7 +656,7 @@ struct OnboardingView: View {
                     .font(.system(size: 32, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
-                    .padding(.top, 51)
+                    .padding(.top, 66)
                     .opacity(imageLoaded13 ? 1 : 0)
                     .animation(.easeIn(duration: 0.3), value: imageLoaded13)
                 , alignment: .top
@@ -840,7 +840,7 @@ struct OnboardingView: View {
 
     private func Step21() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Yoko built a screen time plan for \(childName.isEmpty ? "your child" : childName) based on what you shared")
+            Text("You know what would help \(childName.isEmpty ? "your child" : childName)")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
                 .lineSpacing(4)
@@ -901,7 +901,7 @@ struct OnboardingView: View {
                 .shadow(color: .black.opacity(0.08), radius: 14, y: 6)
             }
 
-            Text("\(childName.isEmpty ? "friend" : childName), Yoko can help turn screen requests into learning moments before play begins.")
+            Text("The habits \(childName.isEmpty ? "your child" : childName) builds today can shape their future.")
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(.white.opacity(0.82))
                 .padding(.top, 8)
@@ -1093,6 +1093,7 @@ struct DemoQuestionScreen: View {
     @State private var gifReady: Bool = false
     @State private var feedback: LessonPlayerView.Feedback = .none
     @State private var advanceTask: Task<Void, Never>?
+    @State private var unscramble = UnscrambleState()
 
     enum DemoMascotMood { case happy, thinking, determined, excited, sad }
 
@@ -1241,7 +1242,8 @@ struct DemoQuestionScreen: View {
                 QuestionRenderer(
                     question: question,
                     selectedAnswer: $selected,
-                    feedback: feedback
+                    feedback: feedback,
+                    unscramble: unscramble
                 )
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -1249,7 +1251,7 @@ struct DemoQuestionScreen: View {
             }
 
             keyProgressRow
-                .padding(.horizontal, 40)
+                .padding(.horizontal, 20)
                 .padding(.bottom, 16)
                 .padding(.top, 8)
 
@@ -1301,12 +1303,23 @@ struct DemoQuestionScreen: View {
     }
 
     private var keyProgressRow: some View {
-        HStack(spacing: 16) {
-            ForEach(0..<totalQuestions, id: \.self) { keyIndex in
-                keyCircle(for: keyIndex)
+        HStack(spacing: 0) {
+            if unscramble.active {
+                UnscrambleBackButton(state: unscramble)
+                Spacer(minLength: 4)
+            }
+            HStack(spacing: 16) {
+                ForEach(0..<totalQuestions, id: \.self) { keyIndex in
+                    keyCircle(for: keyIndex)
+                }
+            }
+            if unscramble.active {
+                Spacer(minLength: 4)
+                UnscrambleHintButton(state: unscramble)
             }
         }
         .frame(maxWidth: .infinity)
+        .animation(.spring(duration: 0.3), value: unscramble.active)
     }
 
     @ViewBuilder
@@ -1375,6 +1388,7 @@ struct PlanCreationView: View {
     @State private var overallProgress: Double = 0
     @State private var displayedPercent: Int = 0
     @State private var rowProgress: [Double] = [0, 0, 0, 0]
+    @State private var planMascotURL: String = mascotGIF(.thinking)
 
     private var rows: [(label: String, value: String)] {
         [
@@ -1395,7 +1409,7 @@ struct PlanCreationView: View {
 
     var body: some View {
         VStack(spacing: 22) {
-            MascotGIF(url: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/LearnLock/ThinkingGIF.gif", size: 160)
+            MascotGIF(url: planMascotURL, size: 160)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 6) {
@@ -1457,6 +1471,9 @@ struct PlanCreationView: View {
                     rowProgress[idx] = 1.0
                 }
             }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            planMascotURL = mascotGIF(.happy)
         }
     }
 }
@@ -1793,7 +1810,7 @@ struct MascotGIF: View {
 
     var body: some View {
         AnimatedGIFView(urlString: url)
-            .frame(width: size, height: size)
+            .frame(width: size * 0.3, height: size * 0.3)
     }
 }
 
