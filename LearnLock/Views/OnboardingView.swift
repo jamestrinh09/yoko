@@ -1810,7 +1810,7 @@ struct MascotGIF: View {
 
     var body: some View {
         AnimatedGIFView(urlString: url)
-            .frame(width: size * 0.3, height: size * 0.3)
+            .frame(width: size, height: size)
     }
 }
 
