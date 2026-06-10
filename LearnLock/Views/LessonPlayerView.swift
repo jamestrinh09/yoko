@@ -31,6 +31,7 @@ struct LessonPlayerView: View {
     @State private var autoAdvanceTask: Task<Void, Never>?
     @State private var lessonResult: LessonResult?
     @State private var lessonRewards: [MilestoneReward] = []
+    @State private var showStreak: Bool = false
     @State private var unscramble = UnscrambleState()
 
     enum Feedback { case none, correct, incorrect }
@@ -38,12 +39,19 @@ struct LessonPlayerView: View {
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                if showSummary, let lessonResult {
+                if showStreak {
+                    StreakCelebrationView(
+                        streak: store.profile.streak,
+                        childName: store.profile.name,
+                        onContinue: { dismiss() }
+                    )
+                    .transition(.opacity)
+                } else if showSummary, let lessonResult {
                     LessonCompleteView(
                         result: lessonResult,
                         rewards: lessonRewards,
                         childName: store.profile.name,
-                        onDone: { dismiss() },
+                        onDone: { withAnimation(.spring(duration: 0.5)) { showStreak = true } },
                         onTellParent: { store.tellParentAboutPromotion() }
                     )
                 } else {
@@ -81,7 +89,7 @@ struct LessonPlayerView: View {
                             .resizable()
                             .scaledToFill()
                             .scaleEffect(1.05)
-                            .offset(y: -34)
+                            .offset(y: -44)
                     } else {
                         Color(red: 0.35, green: 0.55, blue: 0.30)
                     }
@@ -117,8 +125,8 @@ struct LessonPlayerView: View {
 
             // Mascot centered in hero area
             mascotImage(urlString: mascotURL)
-                .frame(width: 49, height: 49)
-                .padding(.top, 1)
+                .frame(width: 162, height: 162)
+                .padding(.top, -4)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
             // White content area with rounded top corners layered over hero (up 15pt)
@@ -192,7 +200,7 @@ struct LessonPlayerView: View {
             )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: -4)
-        .padding(.top, 7)
+        .padding(.top, -3)
     }
 
     // MARK: - Scroll Hint

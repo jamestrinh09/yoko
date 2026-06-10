@@ -199,6 +199,8 @@ struct ChildProfile: Hashable {
     var totalCorrectAnswers: Int = 0
     var totalAnswersGiven: Int = 0
     var startDate: Date = Date()
+    /// The day the most recent lesson was completed (drives the daily streak).
+    var lastLessonDate: Date? = nil
 
     /// Lifetime correct-answer ratio used for grade-promotion eligibility.
     var overallAccuracy: Double {

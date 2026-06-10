@@ -259,6 +259,7 @@ struct OnboardingView: View {
     private func completeOnboarding() {
         let gen = UIImpactFeedbackGenerator(style: .medium)
         gen.impactOccurred()
+        store.unlockRule = unlockRule
         store.onboardingComplete = true
     }
 
@@ -289,7 +290,7 @@ struct OnboardingView: View {
     private func Step1() -> some View {
         VStack(spacing: 0) {
             mascotBubble(text: "Hi I'm Yoko")
-            MascotGIF(url: mascotGIF(.happy), size: min(79, UIScreen.main.bounds.width * 0.18))
+            MascotGIF(url: mascotGIF(.happy), size: min(261, UIScreen.main.bounds.width * 0.6))
                 .padding(.top, 20)
         }
         .frame(maxWidth: .infinity)
@@ -352,7 +353,7 @@ struct OnboardingView: View {
 
     private func Step4() -> some View {
         VStack(alignment: .leading, spacing: 24) {
-            MascotGIF(url: mascotGIF(.thinking), size: 53)
+            MascotGIF(url: mascotGIF(.thinking), size: 175)
                 .frame(maxWidth: .infinity)
             Text("Who are we helping?")
                 .font(.dsTitle)
@@ -522,7 +523,7 @@ struct OnboardingView: View {
 
     private func Step9() -> some View {
         VStack(alignment: .leading, spacing: 24) {
-            MascotGIF(url: mascotGIF(.determined), size: 53)
+            MascotGIF(url: mascotGIF(.determined), size: 175)
                 .frame(maxWidth: .infinity)
             Text("That adds up fast.")
                 .font(.dsTitle)
@@ -656,7 +657,7 @@ struct OnboardingView: View {
                     .font(.system(size: 32, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
-                    .padding(.top, 66)
+                    .padding(.top, 86)
                     .opacity(imageLoaded13 ? 1 : 0)
                     .animation(.easeIn(duration: 0.3), value: imageLoaded13)
                 , alignment: .top
@@ -665,7 +666,7 @@ struct OnboardingView: View {
                 nextStep()
             }
         }
-        .padding(.top, -45)
+        .padding(.top, -50)
     }
 
     // MARK: - Step 14
@@ -674,7 +675,7 @@ struct OnboardingView: View {
         VStack(spacing: 24) {
             MascotGIF(
                 url: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/LearnLock/GlassesGIF.gif",
-                size: 60
+                size: 198
             )
                 .frame(maxWidth: .infinity)
 
@@ -748,7 +749,7 @@ struct OnboardingView: View {
     private func Step18() -> some View {
         VStack(spacing: 18) {
             Color.clear.frame(height: 0)
-            MascotGIF(url: mascotGIF(.excited), size: 54)
+            MascotGIF(url: mascotGIF(.excited), size: 178)
                 .frame(maxWidth: .infinity)
 
             Text("1")
@@ -796,14 +797,11 @@ struct OnboardingView: View {
 
     private func Step19() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            MascotGIF(url: mascotGIF(.proud), size: 48)
+            MascotGIF(url: mascotGIF(.proud), size: 158)
                 .frame(maxWidth: .infinity)
-            Text("Set the unlock rule.")
-                .font(.dsTitle)
+            Text("Set the Unlock Rule")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(DS.Color.textPrimary)
-            Text("Choose how learning turns into access.")
-                .font(.dsBody)
-                .foregroundStyle(DS.Color.textSecondary)
 
             let rules: [(id: String, label: String, desc: String, icon: String)] = [
                 ("session", "3 questions = unlock this session", "Answer each time they want access", "🔄"),
@@ -817,6 +815,8 @@ struct OnboardingView: View {
                         icon: r.icon,
                         title: r.label,
                         subtitle: r.desc,
+                        titleFont: .system(size: 19, weight: .semibold, design: .rounded),
+                        subtitleFont: .system(size: 14, weight: .regular, design: .rounded),
                         selected: unlockRule == r.id
                     ) {
                         unlockRule = r.id
@@ -900,11 +900,6 @@ struct OnboardingView: View {
                 .clipShape(.rect(cornerRadius: 24))
                 .shadow(color: .black.opacity(0.08), radius: 14, y: 6)
             }
-
-            Text("The habits \(childName.isEmpty ? "your child" : childName) builds today can shape their future.")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.82))
-                .padding(.top, 8)
         }
     }
 
@@ -913,11 +908,11 @@ struct OnboardingView: View {
     private func Step22() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            MascotGIF(url: mascotGIF(.determined), size: 45)
+            MascotGIF(url: mascotGIF(.determined), size: 149)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
-                Text("Let Yoko lock the fun stuff")
+                Text("Connect Yoko to screen time")
                     .font(.dsTitle)
                     .foregroundStyle(DS.Color.textPrimary)
                     .multilineTextAlignment(.center)
@@ -970,15 +965,15 @@ struct OnboardingView: View {
     private func Step23() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            MascotGIF(url: mascotGIF(.proud), size: 45)
+            MascotGIF(url: mascotGIF(.proud), size: 149)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
-                Text("Stay on track together")
+                Text("Allow Yoko to send notifications")
                     .font(.dsTitle)
                     .foregroundStyle(DS.Color.textPrimary)
                     .multilineTextAlignment(.center)
-                Text("Get a gentle nudge so \(nameDisplay) keeps the streak alive and never misses daily practice.")
+                Text("We use this to allow \(nameDisplay) to unblock their apps when they need to learn.")
                     .font(.dsBody)
                     .foregroundStyle(DS.Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -1142,7 +1137,7 @@ struct DemoQuestionScreen: View {
                     VStack(spacing: 0) {
                         topBar
 
-                        MascotGIF(url: mascotURL, size: 49)
+                        MascotGIF(url: mascotURL, size: 162)
                             .padding(.top, -3)
                             .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
@@ -1409,7 +1404,7 @@ struct PlanCreationView: View {
 
     var body: some View {
         VStack(spacing: 22) {
-            MascotGIF(url: planMascotURL, size: 48)
+            MascotGIF(url: planMascotURL, size: 158)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 6) {
@@ -1542,7 +1537,7 @@ struct OnboardingDemoQuestion: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            MascotGIF(url: mascotURL, size: 36)
+            MascotGIF(url: mascotURL, size: 119)
                 .frame(maxWidth: .infinity)
                 .padding(.top, 8)
 
@@ -1725,6 +1720,8 @@ struct SelectableRow: View {
     var icon: String? = nil
     let title: String
     var subtitle: String? = nil
+    var titleFont: Font = .dsHeadline
+    var subtitleFont: Font = .dsCaption
     let selected: Bool
     let action: () -> Void
 
@@ -1737,11 +1734,11 @@ struct SelectableRow: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.dsHeadline)
+                        .font(titleFont)
                         .foregroundStyle(DS.Color.textPrimary)
                     if let subtitle {
                         Text(subtitle)
-                            .font(.dsCaption)
+                            .font(subtitleFont)
                             .foregroundStyle(DS.Color.textSecondary)
                     }
                 }

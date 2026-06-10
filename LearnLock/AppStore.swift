@@ -21,8 +21,18 @@ final class AppStore {
     var iCloudSyncEnabled: Bool = true
     var onboardingComplete: Bool = false
 
+    /// How learning unlocks access. One of "session", "time", or "daily".
+    /// Set during onboarding and applied to the app afterwards.
+    var unlockRule: String = "session"
+
     /// A grade promotion awaiting parent approval (drives the promotion banner).
     var pendingPromotion: GradePromotion?
+
+    /// Children in the household. All children share the same curriculum and
+    /// progress; switching the active child only changes the displayed identity.
+    var children: [Child]
+    /// The currently active child's id.
+    var activeChildId: UUID
 
     /// Number of lessons kept ahead of the user at any time.
     private let queueTargetSize: Int = 20
@@ -43,8 +53,45 @@ final class AppStore {
         self.subjects = SeedData.subjects(grade: 1)
         self.locks = SeedData.locks()
         self.achievements = SeedData.achievements()
+        let firstChild = Child(name: "James", colorIndex: 0)
+        self.children = [firstChild]
+        self.activeChildId = firstChild.id
         self.profile.currentGrade = CurriculumGenerator.gradeBand(for: 1)
         self.profile.startDate = Date()
+    }
+
+    // MARK: - Children
+
+    /// The currently active child identity.
+    var activeChild: Child? {
+        children.first(where: { $0.id == activeChildId })
+    }
+
+    /// Add a new child to the household. Children share the same curriculum and
+    /// progress — only their name and avatar differ.
+    func addChild(name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let child = Child(name: trimmed, colorIndex: children.count)
+        children.append(child)
+        switchChild(child.id)
+    }
+
+    /// Switch the active child. The shared progress stays the same; only the
+    /// displayed name updates.
+    func switchChild(_ id: UUID) {
+        guard let child = children.first(where: { $0.id == id }) else { return }
+        activeChildId = id
+        profile.name = child.name
+    }
+
+    /// Remove a child. The last remaining child cannot be removed.
+    func removeChild(_ id: UUID) {
+        guard children.count > 1 else { return }
+        children.removeAll { $0.id == id }
+        if activeChildId == id, let first = children.first {
+            switchChild(first.id)
+        }
     }
 
     // MARK: - Derived
@@ -83,10 +130,13 @@ final class AppStore {
             refillQueueIfNeeded(subjectIndex: sIdx)
         }
 
-        // Base screen time + lifetime stats.
+        updateStreak()
+
+        // Base screen time + lifetime stats. The unlock rule chosen during
+        // onboarding determines how much access a completed lesson grants.
         let minutes = max(2, lesson.questions.count)
         profile.minutesLearnedToday += minutes
-        profile.earnedScreenTimeMinutes += minutes / 2 + 5
+        profile.earnedScreenTimeMinutes += earnedMinutes(forBaseLearning: minutes)
         profile.totalXP += xpEarned
         profile.lifetimeXP += xpEarned
         profile.totalLessonsCompleted += 1
@@ -112,6 +162,33 @@ final class AppStore {
         )
         applyRewards(rewards)
         return (result, rewards)
+    }
+
+    /// Maps completed learning to earned screen time based on the active
+    /// unlock rule: a fixed time block, a full-day allowance, or per-session.
+    private func earnedMinutes(forBaseLearning minutes: Int) -> Int {
+        switch unlockRule {
+        case "time": return 30
+        case "daily": return 240
+        default: return minutes / 2 + 5
+        }
+    }
+
+    /// Advances the daily streak. The first lesson completed on a new calendar
+    /// day bumps the streak; a gap of more than one day resets it to 1.
+    private func updateStreak() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let last = profile.lastLessonDate else {
+            profile.streak = max(profile.streak, 1)
+            profile.lastLessonDate = today
+            return
+        }
+        let lastDay = calendar.startOfDay(for: last)
+        guard lastDay != today else { return } // already counted today
+        let gap = calendar.dateComponents([.day], from: lastDay, to: today).day ?? 0
+        profile.streak = gap == 1 ? profile.streak + 1 : 1
+        profile.lastLessonDate = today
     }
 
     private func applyRewards(_ rewards: [MilestoneReward]) {
@@ -167,6 +244,9 @@ final class AppStore {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         profile.name = trimmed
+        if let idx = children.firstIndex(where: { $0.id == activeChildId }) {
+            children[idx].name = trimmed
+        }
     }
 
     /// Update the daily learning goal in minutes (clamped to a sensible range).

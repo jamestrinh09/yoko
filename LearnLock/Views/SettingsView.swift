@@ -83,8 +83,8 @@ struct SettingsView: View {
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showFamilySharing) {
-            FamilySharingSheet(childName: store.profile.name)
-                .presentationDetents([.medium])
+            FamilySharingSheet()
+                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showContactSupport) {
             ContactSupportSheet()
@@ -302,7 +302,7 @@ struct SettingsView: View {
                 Divider().padding(.leading, 56)
                 toggleRow(symbol: "icloud.fill", title: "iCloud Sync", isOn: $store.iCloudSyncEnabled)
                 Divider().padding(.leading, 56)
-                navRow(symbol: "person.2.fill", title: "Family Sharing", value: "1 child") {
+                navRow(symbol: "person.2.fill", title: "Family Sharing", value: "\(store.children.count) \(store.children.count == 1 ? "child" : "children")") {
                     showFamilySharing = true
                 }
             }
@@ -708,8 +708,9 @@ struct SubjectsOverviewSheet: View {
 // MARK: - Family Sharing Sheet
 
 struct FamilySharingSheet: View {
-    let childName: String
+    @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @State private var showAddChild: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -725,43 +726,44 @@ struct FamilySharingSheet: View {
                         Text("Family Sharing")
                             .font(.dsTitle2)
                             .foregroundStyle(DS.Color.textPrimary)
-                        Text("Manage the children connected to this account.")
+                        Text("Each child has their own profile and shares the same learning plan and progress.")
                             .font(.dsCallout)
                             .foregroundStyle(DS.Color.textSecondary)
                             .multilineTextAlignment(.center)
                     }
                     .padding(.top, 8)
 
-                    VStack(spacing: 0) {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                Circle().fill(DS.Color.accent).frame(width: 40, height: 40)
-                                Text(String(childName.prefix(1)))
-                                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.white)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(childName).font(.dsHeadline).foregroundStyle(DS.Color.textPrimary)
-                                Text("Child profile").font(.dsCaption).foregroundStyle(DS.Color.textSecondary)
-                            }
-                            Spacer()
-                            Text("Active")
-                                .font(.dsTiny)
-                                .foregroundStyle(DS.Color.success)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(DS.Color.success.opacity(0.12))
-                                .clipShape(.capsule)
+                    VStack(spacing: 10) {
+                        ForEach(store.children) { child in
+                            childRow(child)
                         }
-                        .padding(16)
                     }
-                    .background(DS.Color.surface)
-                    .clipShape(.rect(cornerRadius: DS.Radius.large))
-                    .overlay(RoundedRectangle(cornerRadius: DS.Radius.large).stroke(DS.Color.border, lineWidth: 1))
 
-                    Text("Adding more children is coming soon.")
+                    Button {
+                        showAddChild = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 18, weight: .bold))
+                            Text("Add a Child")
+                                .font(.dsHeadline)
+                        }
+                        .foregroundStyle(DS.Color.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(DS.Color.accentSoft)
+                        .clipShape(.rect(cornerRadius: DS.Radius.large))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DS.Radius.large)
+                                .stroke(DS.Color.accent.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5]))
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    Text("Tap a child to make their profile active. Everyone learns from the same shared plan.")
                         .font(.dsCaption)
                         .foregroundStyle(DS.Color.textTertiary)
+                        .multilineTextAlignment(.center)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
@@ -772,6 +774,133 @@ struct FamilySharingSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showAddChild) {
+                AddChildSheet { name in
+                    store.addChild(name: name)
+                }
+                .presentationDetents([.medium])
+            }
+        }
+    }
+
+    private func childRow(_ child: Child) -> some View {
+        let isActive = child.id == store.activeChildId
+        return Button {
+            withAnimation(.spring(duration: 0.3)) { store.switchChild(child.id) }
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(child.avatarColor).frame(width: 40, height: 40)
+                    Text(child.initial)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(child.name).font(.dsHeadline).foregroundStyle(DS.Color.textPrimary)
+                    Text("Child profile").font(.dsCaption).foregroundStyle(DS.Color.textSecondary)
+                }
+                Spacer()
+                if isActive {
+                    Text("Active")
+                        .font(.dsTiny)
+                        .foregroundStyle(DS.Color.success)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(DS.Color.success.opacity(0.12))
+                        .clipShape(.capsule)
+                } else {
+                    Image(systemName: "circle")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(DS.Color.textTertiary.opacity(0.5))
+                }
+            }
+            .padding(16)
+            .background(DS.Color.surface)
+            .clipShape(.rect(cornerRadius: DS.Radius.large))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.large)
+                    .stroke(isActive ? DS.Color.accent : DS.Color.border, lineWidth: isActive ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .swipeIfRemovable(child: child, store: store)
+    }
+}
+
+private extension View {
+    /// Adds a destructive context-menu "Remove" action when more than one child
+    /// exists (the last child can't be removed).
+    @ViewBuilder
+    func swipeIfRemovable(child: Child, store: AppStore) -> some View {
+        if store.children.count > 1 {
+            self.contextMenu {
+                Button(role: .destructive) {
+                    withAnimation { store.removeChild(child.id) }
+                } label: {
+                    Label("Remove \(child.name)", systemImage: "trash")
+                }
+            }
+        } else {
+            self
+        }
+    }
+}
+
+// MARK: - Add Child Sheet
+
+struct AddChildSheet: View {
+    @State private var name: String = ""
+    let onAdd: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("Add another child to your household. They'll get their own profile and share the same learning plan and progress.")
+                        .font(.dsCallout)
+                        .foregroundStyle(DS.Color.textSecondary)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Child's Name")
+                            .font(.dsCaption)
+                            .foregroundStyle(DS.Color.textSecondary)
+                        TextField("Name", text: $name)
+                            .font(.dsHeadline)
+                            .foregroundStyle(DS.Color.textPrimary)
+                            .textInputAutocapitalization(.words)
+                            .autocorrectionDisabled()
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(DS.Color.surface)
+                            .clipShape(.rect(cornerRadius: DS.Radius.medium))
+                            .overlay(RoundedRectangle(cornerRadius: DS.Radius.medium).stroke(DS.Color.border, lineWidth: 1))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+            }
+            .dsScreenBackground()
+            .navigationTitle("Add Child")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Add") {
+                        onAdd(trimmedName)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(trimmedName.isEmpty)
                 }
             }
         }
