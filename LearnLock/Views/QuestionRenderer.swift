@@ -134,7 +134,7 @@ struct QuestionRenderer: View {
             ArrayBuilderCard(rows: int(content["rows"]), columns: int(content["columns"]), item: content["item"] ?? "●")
 
         case "division_as_sharing":
-            GroupingBucketsCard(total: totalObjects(content["objects"]), buckets: int(content["buckets"]), item: "🐟")
+            GroupingBucketsCard(total: totalObjects(content["objects"]), buckets: int(content["buckets"]), item: objectEmoji(content["objects"]))
 
         case "pattern_recognition":
             PatternRowCard(sequence: visualSequence)
@@ -365,6 +365,13 @@ struct QuestionRenderer: View {
     private func int(_ value: String?) -> Int { Int((value ?? "0").filter { $0.isNumber }) ?? 0 }
     private func signedInt(_ value: String?) -> Int { Int(value ?? "0") ?? int(value) }
     private func totalObjects(_ value: String?) -> Int { Int((value ?? "0").filter { $0.isNumber }) ?? 0 }
+    /// Extracts the leading emoji from a content value like "🐸x12" so the
+    /// grouping buckets show the same object the prompt mentions.
+    private func objectEmoji(_ value: String?) -> String {
+        guard let value, let x = value.firstIndex(of: "x") else { return "🐟" }
+        let emoji = String(value[..<x]).trimmingCharacters(in: .whitespaces)
+        return emoji.isEmpty ? "🐟" : emoji
+    }
     private func displayPattern(_ pattern: String) -> String { pattern.replacingOccurrences(of: "__", with: "▢").replacingOccurrences(of: "_", with: "▢") }
 
     private func assembledAnswer(from tokens: [String]) -> String? {

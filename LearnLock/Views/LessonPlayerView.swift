@@ -89,7 +89,7 @@ struct LessonPlayerView: View {
                             .resizable()
                             .scaledToFill()
                             .scaleEffect(1.05)
-                            .offset(y: -44)
+                            .offset(y: -54)
                     } else {
                         Color(red: 0.35, green: 0.55, blue: 0.30)
                     }
@@ -126,7 +126,7 @@ struct LessonPlayerView: View {
             // Mascot centered in hero area
             mascotImage(urlString: mascotURL)
                 .frame(width: 162, height: 162)
-                .padding(.top, -4)
+                .padding(.top, -9)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
             // White content area with rounded top corners layered over hero (up 15pt)
@@ -167,6 +167,11 @@ struct LessonPlayerView: View {
                             .onChange(of: proxy.size.height) { _, h in contentHeight = h }
                     }
                 )
+                .id(index)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
             }
             .background(
                 GeometryReader { proxy in
@@ -200,7 +205,7 @@ struct LessonPlayerView: View {
             )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: -4)
-        .padding(.top, -3)
+        .padding(.top, -13)
     }
 
     // MARK: - Scroll Hint

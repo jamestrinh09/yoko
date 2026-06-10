@@ -1131,18 +1131,24 @@ struct DemoQuestionScreen: View {
             ZStack {
                 Color.white.ignoresSafeArea()
 
-                ZStack {
+                ZStack(alignment: .top) {
                     splitBackground
 
                     VStack(spacing: 0) {
-                        topBar
+                        // Reserve the same top spacing the lesson player uses so
+                        // the mascot + content land at an identical position and
+                        // the progress bar never pushes the hero down.
+                        Color.clear.frame(height: screenHeight * 0.06)
 
                         MascotGIF(url: mascotURL, size: 162)
-                            .padding(.top, -3)
+                            .padding(.top, -9)
                             .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
                         contentArea
                     }
+
+                    // Progress bar floats over the hero without affecting layout.
+                    topBar
                 }
                 .opacity(isReady ? 1 : 0)
 
@@ -1207,7 +1213,7 @@ struct DemoQuestionScreen: View {
                             .resizable()
                             .scaledToFill()
                             .scaleEffect(1.05)
-                            .offset(x: -5, y: -38)
+                            .offset(y: -54)
                             .onAppear {
                                 withAnimation(.easeIn(duration: 0.25)) { bgLoaded = true }
                             }
@@ -1224,7 +1230,7 @@ struct DemoQuestionScreen: View {
                 )
                 .frame(height: 110)
             }
-            .frame(height: screenHeight * 0.46)
+            .frame(height: screenHeight * 0.50)
 
             Color.white.frame(maxHeight: .infinity)
         }
@@ -1267,7 +1273,7 @@ struct DemoQuestionScreen: View {
             )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: -4)
-        .padding(.top, 7)
+        .padding(.top, -13)
     }
 
     private func evaluate() {

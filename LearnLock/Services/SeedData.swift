@@ -22,12 +22,11 @@ enum SeedData {
 
     static func locks() -> [AppLock] {
         [
-            AppLock(name: "YouTube", symbol: "play.rectangle.fill", iconColor: Color(red: 0.93, green: 0.18, blue: 0.18), category: "Video", type: .educational, requiredMinutes: 20, requiredQuestions: 10, requiredSubject: .math, earnedMinutesAvailable: 0),
-            AppLock(name: "TikTok", symbol: "music.note", iconColor: Color(red: 0.05, green: 0.05, blue: 0.05), category: "Social", type: .reward, requiredMinutes: 30, earnedMinutesAvailable: 0),
-            AppLock(name: "Roblox", symbol: "gamecontroller.fill", iconColor: Color(red: 0.85, green: 0.2, blue: 0.2), category: "Games", type: .timed, earnedMinutesAvailable: 0, scheduleStart: 16, scheduleEnd: 20),
-            AppLock(name: "Instagram", symbol: "camera.fill", iconColor: Color(red: 0.85, green: 0.3, blue: 0.55), category: "Social", type: .full),
-            AppLock(name: "Snapchat", symbol: "bubble.left.and.bubble.right.fill", iconColor: Color(red: 1.0, green: 0.85, blue: 0.0), category: "Social", type: .reward, requiredMinutes: 15, earnedMinutesAvailable: 0),
-            AppLock(name: "Mobile Games", symbol: "rectangle.stack.fill", iconColor: Color(red: 0.4, green: 0.5, blue: 0.95), category: "Games", type: .educational, requiredQuestions: 15, requiredSubject: .english)
+            AppLock(name: "YouTube", symbol: "play.rectangle.fill", iconColor: Color(red: 0.93, green: 0.18, blue: 0.18), category: "Video", type: .educational, enabled: false, requiredMinutes: 20, requiredQuestions: 10, requiredSubject: .math, earnedMinutesAvailable: 0),
+            AppLock(name: "TikTok", symbol: "music.note", iconColor: Color(red: 0.05, green: 0.05, blue: 0.05), category: "Social", type: .reward, enabled: false, requiredMinutes: 30, earnedMinutesAvailable: 0),
+            AppLock(name: "Roblox", symbol: "gamecontroller.fill", iconColor: Color(red: 0.85, green: 0.2, blue: 0.2), category: "Games", type: .timed, enabled: false, earnedMinutesAvailable: 0, scheduleStart: 16, scheduleEnd: 20),
+            AppLock(name: "Instagram", symbol: "camera.fill", iconColor: Color(red: 0.85, green: 0.3, blue: 0.55), category: "Social", type: .full, enabled: false),
+            AppLock(name: "Snapchat", symbol: "bubble.left.and.bubble.right.fill", iconColor: Color(red: 1.0, green: 0.85, blue: 0.0), category: "Social", type: .reward, enabled: false, requiredMinutes: 15, earnedMinutesAvailable: 0)
         ]
     }
 
