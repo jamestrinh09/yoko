@@ -3,7 +3,7 @@
   "apps": [
     {
       "name": "LearnLock",
-      "path": ".",
+      "path": "ios-learnlock",
       "framework": "swift"
     }
   ]
