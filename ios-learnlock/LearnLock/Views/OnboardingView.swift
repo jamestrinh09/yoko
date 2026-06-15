@@ -2005,23 +2005,46 @@ struct CommitmentScreen: View {
 
     var body: some View {
         GeometryReader { geo in
-            let thumbCenter = CGPoint(x: geo.size.width / 2, y: geo.size.height - 128)
+            let thumbCenter = CGPoint(x: geo.size.width / 2, y: geo.size.height - 132)
             let coverScale = (2 * hypot(geo.size.width, geo.size.height)) / 96 + 1
 
             ZStack {
                 DS.Color.background.ignoresSafeArea()
 
+                // Warm glow behind the fingerprint that intensifies as the parent holds.
+                RadialGradient(
+                    colors: [DS.Color.accent.opacity(0.16 + fillProgress * 0.28), .clear],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: 230
+                )
+                .frame(width: 460, height: 460)
+                .position(thumbCenter)
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
+
                 VStack(spacing: 0) {
                     topBar
 
                     ScrollView(showsIndicators: false) {
-                        VStack(spacing: 22) {
+                        VStack(spacing: 18) {
+                            MascotGIF(url: mascotGIF(.proud), size: 122)
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 2)
+
+                            Text("the parent promise")
+                                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                                .foregroundStyle(DS.Color.accent)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 7)
+                                .background(DS.Color.accentSoft)
+                                .clipShape(.capsule)
+
                             Text("Commit to putting \(possessive) education first")
                                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                                 .foregroundStyle(DS.Color.textPrimary)
                                 .multilineTextAlignment(.center)
                                 .lineSpacing(3)
-                                .padding(.top, 6)
 
                             Text("Sign below as your promise to help \(childDisplay) learn a little every day.")
                                 .font(.dsBody)
@@ -2033,7 +2056,8 @@ struct CommitmentScreen: View {
                             signatureCard
                         }
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 260)
+                        .padding(.top, 4)
+                        .padding(.bottom, 280)
                     }
                 }
 
@@ -2055,14 +2079,22 @@ struct CommitmentScreen: View {
                     .allowsHitTesting(false)
 
                 if completed {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 18) {
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 68, weight: .bold))
+                            .font(.system(size: 72, weight: .bold))
                             .foregroundStyle(.white)
-                        Text("Promise made")
-                            .font(.system(size: 26, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.white)
+                            .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
+                        VStack(spacing: 6) {
+                            Text("Promise made")
+                                .font(.system(size: 28, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text("Let's help \(childDisplay) learn every day")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.92))
+                                .multilineTextAlignment(.center)
+                        }
                     }
+                    .padding(.horizontal, 32)
                     .transition(.scale(scale: 0.7).combined(with: .opacity))
                     .allowsHitTesting(false)
                 }
@@ -2134,12 +2166,17 @@ struct CommitmentScreen: View {
 
                 VStack {
                     Spacer()
-                    Rectangle()
-                        .fill(DS.Color.border)
-                        .frame(height: 1.5)
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 34)
-                        .allowsHitTesting(false)
+                    HStack(spacing: 10) {
+                        Text("✕")
+                            .font(.system(size: 15, weight: .heavy, design: .rounded))
+                            .foregroundStyle(DS.Color.textTertiary)
+                        Rectangle()
+                            .fill(DS.Color.border)
+                            .frame(height: 1.5)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 34)
+                    .allowsHitTesting(false)
                 }
             }
             .frame(height: 200)
@@ -2178,9 +2215,26 @@ struct CommitmentScreen: View {
     }
 
     private var thumbLabel: some View {
-        Text("Tap and hold")
-            .font(.system(size: 15, weight: .bold, design: .rounded))
-            .foregroundStyle(hasSignature ? DS.Color.textSecondary : DS.Color.textTertiary)
+        VStack(spacing: 3) {
+            Text(holdTask != nil ? "Keep holding…" : "Tap and hold")
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(hasSignature ? DS.Color.accent : DS.Color.textTertiary)
+                .contentTransition(.opacity)
+            if !hasSignature {
+                Text("Sign first to confirm")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(DS.Color.textTertiary)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: holdTask != nil)
+    }
+
+    private var accentGradient: LinearGradient {
+        LinearGradient(
+            colors: [Color(red: 1.0, green: 0.69, blue: 0.0), DS.Color.accent, Color(red: 1.0, green: 0.42, blue: 0.10)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
     private var thumbButton: some View {
@@ -2188,24 +2242,33 @@ struct CommitmentScreen: View {
             if hasSignature && !completed {
                 Circle()
                     .stroke(DS.Color.accent.opacity(0.35), lineWidth: 2)
-                    .frame(width: 96, height: 96)
-                    .scaleEffect(pulse ? 1.18 : 1)
+                    .frame(width: 104, height: 104)
+                    .scaleEffect(pulse ? 1.2 : 1)
                     .opacity(pulse ? 0 : 0.8)
             }
 
             Circle()
                 .fill(hasSignature ? DS.Color.accentSoft : DS.Color.surface)
-                .frame(width: 88, height: 88)
+                .frame(width: 92, height: 92)
                 .overlay(
-                    Circle().stroke(hasSignature ? DS.Color.accent.opacity(0.5) : DS.Color.border, lineWidth: 2)
+                    Circle().stroke(hasSignature ? DS.Color.accent.opacity(0.4) : DS.Color.border, lineWidth: 2)
                 )
                 .overlay(
                     Image(systemName: "touchid")
-                        .font(.system(size: 40, weight: .regular))
+                        .font(.system(size: 42, weight: .regular))
                         .foregroundStyle(hasSignature ? DS.Color.accent : DS.Color.textTertiary)
                 )
-                .scaleEffect(holdTask != nil ? 0.92 : 1)
+                .scaleEffect(holdTask != nil ? 0.9 : 1)
                 .animation(.spring(duration: 0.3), value: holdTask != nil)
+
+            // Progress ring fills around the fingerprint as the parent holds.
+            Circle()
+                .trim(from: 0, to: fillProgress)
+                .stroke(accentGradient, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .frame(width: 96, height: 96)
+                .rotationEffect(.degrees(-90))
+                .opacity(holdTask != nil ? 1 : 0)
+                .shadow(color: DS.Color.accent.opacity(0.4), radius: 6)
         }
         .contentShape(Circle())
         .gesture(
