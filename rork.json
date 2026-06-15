@@ -4,7 +4,10 @@
     {
       "name": "LearnLock",
       "path": "ios-learnlock",
-      "framework": "swift"
+      "framework": "swift",
+      "settings": {
+        "displayName": "Yoko"
+      }
     }
   ]
 }
