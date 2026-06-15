@@ -979,8 +979,17 @@ struct OnboardingView: View {
     private func Step23() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            MascotGIF(url: mascotGIF(.proud), size: 149)
-                .frame(maxWidth: .infinity)
+            AsyncImage(url: URL(string: AssetURLs.notificationsHero)) { phase in
+                if let image = phase.image {
+                    image
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(height: 132)
+            .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
                 Text("Allow Yoko to send notifications")
