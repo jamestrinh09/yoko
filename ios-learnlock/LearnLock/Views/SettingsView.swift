@@ -340,7 +340,11 @@ struct SettingsView: View {
                 }
                 Divider().padding(.leading, 56)
                 navRow(symbol: "doc.text.fill", title: "Privacy Policy", value: nil) {
-                    if let url = URL(string: "https://rork.app/privacy") { openURL(url) }
+                    if let url = URL(string: "https://fortune-infinity-64c.notion.site/Privacy-Policy-37bd7b68e37a80e28670d77ef7c721a7?pvs=73") { openURL(url) }
+                }
+                Divider().padding(.leading, 56)
+                navRow(symbol: "checkmark.shield.fill", title: "Terms & Conditions", value: nil) {
+                    if let url = URL(string: "https://fortune-infinity-64c.notion.site/Terms-and-Conditions-37bd7b68e37a8064a091d392e1986b93?pvs=73") { openURL(url) }
                 }
             }
             .background(DS.Color.surface)

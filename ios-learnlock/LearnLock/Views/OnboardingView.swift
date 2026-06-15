@@ -26,11 +26,13 @@ struct OnboardingView: View {
     @State private var imageLoaded11 = false
     @State private var imageLoaded13 = false
 
-    private let totalSteps = 23
+    private let totalSteps = 24
 
     var body: some View {
         Group {
-            if isDemoQuestionStep {
+            if step == 24 {
+                commitmentScreen
+            } else if isDemoQuestionStep {
                 demoQuestionScreen
             } else {
                 standardScreen
@@ -47,6 +49,18 @@ struct OnboardingView: View {
 
     private var isDemoQuestionStep: Bool {
         step == 15 || step == 16 || step == 17
+    }
+
+    // MARK: - Commitment Screen
+
+    private var commitmentScreen: some View {
+        CommitmentScreen(
+            childName: childName,
+            onBack: {
+                withAnimation(.spring(duration: 0.3)) { step = max(1, step - 1) }
+            },
+            onComplete: completeOnboarding
+        )
     }
 
     // MARK: - Standard Screen
@@ -226,7 +240,7 @@ struct OnboardingView: View {
         case 23:
             VStack(spacing: 12) {
                 PrimaryButton(label: "Turn on notifications", action: requestNotificationsThenFinish)
-                Button("Not now", action: completeOnboarding)
+                Button("Not now", action: nextStep)
                     .font(.dsCallout)
                     .foregroundStyle(DS.Color.textSecondary)
             }
@@ -281,7 +295,7 @@ struct OnboardingView: View {
             let granted = (try? await UNUserNotificationCenter.current()
                 .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
             store.notificationsEnabled = granted
-            completeOnboarding()
+            nextStep()
         }
     }
 
@@ -1959,4 +1973,285 @@ private func onboardingImage(_ name: OnboardingImage) -> String {
 
 private enum MascotMood { case happy, thinking, determined, sad, excited, proud }
 private enum OnboardingImage { case lookingAtIpad, behindPov, appBlockDemo, learningStatistic }
+
+// MARK: - Commitment Step
+
+/// Final onboarding step: the parent signs a commitment and presses-and-holds a
+/// fingerprint that expands into a screen-filling circle to confirm. The
+/// expanding circle is the only CTA — there is no separate button.
+struct CommitmentScreen: View {
+    let childName: String
+    let onBack: () -> Void
+    let onComplete: () -> Void
+
+    @State private var strokes: [[CGPoint]] = []
+    @State private var currentStroke: [CGPoint] = []
+    @State private var fillProgress: CGFloat = 0
+    @State private var holdTask: Task<Void, Never>? = nil
+    @State private var completed: Bool = false
+    @State private var pulse: Bool = false
+
+    private var hasSignature: Bool { !strokes.isEmpty || currentStroke.count > 2 }
+
+    private var possessive: String {
+        let name = childName.trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? "your child's" : "\(name)'s"
+    }
+
+    private var childDisplay: String {
+        let name = childName.trimmingCharacters(in: .whitespaces)
+        return name.isEmpty ? "your child" : name
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let thumbCenter = CGPoint(x: geo.size.width / 2, y: geo.size.height - 128)
+            let coverScale = (2 * hypot(geo.size.width, geo.size.height)) / 96 + 1
+
+            ZStack {
+                DS.Color.background.ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    topBar
+
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 22) {
+                            Text("Commit to putting \(possessive) education first")
+                                .font(.system(size: 28, weight: .heavy, design: .rounded))
+                                .foregroundStyle(DS.Color.textPrimary)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(3)
+                                .padding(.top, 6)
+
+                            Text("Sign below as your promise to help \(childDisplay) learn a little every day.")
+                                .font(.dsBody)
+                                .foregroundStyle(DS.Color.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(4)
+                                .padding(.horizontal, 8)
+
+                            signatureCard
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 260)
+                    }
+                }
+
+                // Hold-to-commit fingerprint, pinned above the bottom edge.
+                thumbLabel
+                    .position(x: thumbCenter.x, y: thumbCenter.y - 82)
+                    .opacity(completed ? 0 : 1)
+
+                thumbButton
+                    .position(thumbCenter)
+
+                // The expanding circle that fills the screen as the hold completes.
+                Circle()
+                    .fill(DS.Color.accent)
+                    .frame(width: 96, height: 96)
+                    .scaleEffect(max(0.001, fillProgress * coverScale), anchor: .center)
+                    .position(thumbCenter)
+                    .opacity(fillProgress > 0.001 ? 1 : 0)
+                    .allowsHitTesting(false)
+
+                if completed {
+                    VStack(spacing: 16) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 68, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text("Promise made")
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
+                            .foregroundStyle(.white)
+                    }
+                    .transition(.scale(scale: 0.7).combined(with: .opacity))
+                    .allowsHitTesting(false)
+                }
+            }
+        }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+                pulse = true
+            }
+        }
+        .onDisappear { holdTask?.cancel() }
+    }
+
+    private var topBar: some View {
+        HStack(spacing: 0) {
+            Button(action: onBack) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(DS.Color.textPrimary)
+                    .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .opacity(completed ? 0 : 1)
+
+            ProgressView(value: 1, total: 1)
+                .tint(DS.Color.accent)
+                .frame(height: 4)
+                .frame(maxWidth: 280)
+
+            Color.clear.frame(width: 44, height: 44)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
+    }
+
+    private var signatureCard: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                Canvas { context, _ in
+                    for stroke in strokes + [currentStroke] {
+                        guard stroke.count > 1 else { continue }
+                        var path = Path()
+                        path.move(to: stroke[0])
+                        for point in stroke.dropFirst() { path.addLine(to: point) }
+                        context.stroke(
+                            path,
+                            with: .color(DS.Color.textPrimary),
+                            style: StrokeStyle(lineWidth: 2.8, lineCap: .round, lineJoin: .round)
+                        )
+                    }
+                }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in currentStroke.append(value.location) }
+                        .onEnded { _ in
+                            if currentStroke.count > 1 { strokes.append(currentStroke) }
+                            currentStroke = []
+                        }
+                )
+
+                if !hasSignature {
+                    Text("Sign here")
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .foregroundStyle(DS.Color.textTertiary)
+                        .allowsHitTesting(false)
+                }
+
+                VStack {
+                    Spacer()
+                    Rectangle()
+                        .fill(DS.Color.border)
+                        .frame(height: 1.5)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 34)
+                        .allowsHitTesting(false)
+                }
+            }
+            .frame(height: 200)
+            .background(DS.Color.surface)
+            .clipShape(.rect(cornerRadius: DS.Radius.large))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.large)
+                    .stroke(DS.Color.border, lineWidth: 1)
+            )
+
+            HStack(spacing: 8) {
+                Image(systemName: "signature")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DS.Color.textTertiary)
+                Text("Parent signature")
+                    .font(.dsCaption)
+                    .foregroundStyle(DS.Color.textTertiary)
+                Spacer()
+                if hasSignature {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(duration: 0.3)) {
+                            strokes = []
+                            currentStroke = []
+                        }
+                    } label: {
+                        Text("Clear")
+                            .font(.dsCaption)
+                            .foregroundStyle(DS.Color.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    private var thumbLabel: some View {
+        Text("Tap and hold")
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(hasSignature ? DS.Color.textSecondary : DS.Color.textTertiary)
+    }
+
+    private var thumbButton: some View {
+        ZStack {
+            if hasSignature && !completed {
+                Circle()
+                    .stroke(DS.Color.accent.opacity(0.35), lineWidth: 2)
+                    .frame(width: 96, height: 96)
+                    .scaleEffect(pulse ? 1.18 : 1)
+                    .opacity(pulse ? 0 : 0.8)
+            }
+
+            Circle()
+                .fill(hasSignature ? DS.Color.accentSoft : DS.Color.surface)
+                .frame(width: 88, height: 88)
+                .overlay(
+                    Circle().stroke(hasSignature ? DS.Color.accent.opacity(0.5) : DS.Color.border, lineWidth: 2)
+                )
+                .overlay(
+                    Image(systemName: "touchid")
+                        .font(.system(size: 40, weight: .regular))
+                        .foregroundStyle(hasSignature ? DS.Color.accent : DS.Color.textTertiary)
+                )
+                .scaleEffect(holdTask != nil ? 0.92 : 1)
+                .animation(.spring(duration: 0.3), value: holdTask != nil)
+        }
+        .contentShape(Circle())
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in startHold() }
+                .onEnded { _ in cancelHold() }
+        )
+        .disabled(!hasSignature || completed)
+    }
+
+    private func startHold() {
+        guard hasSignature, holdTask == nil, !completed else { return }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        holdTask = Task { @MainActor in
+            let total: Double = 1.5
+            let tick: Double = 0.016
+            let increment = CGFloat(tick / total)
+            var lastHaptic: CGFloat = 0
+            while fillProgress < 1 {
+                if Task.isCancelled { return }
+                fillProgress = min(1, fillProgress + increment)
+                if fillProgress - lastHaptic >= 0.12 {
+                    lastHaptic = fillProgress
+                    UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: fillProgress)
+                }
+                try? await Task.sleep(for: .seconds(tick))
+            }
+            if !Task.isCancelled { await complete() }
+        }
+    }
+
+    private func cancelHold() {
+        holdTask?.cancel()
+        holdTask = nil
+        if !completed {
+            withAnimation(.spring(duration: 0.5)) { fillProgress = 0 }
+        }
+    }
+
+    @MainActor
+    private func complete() async {
+        holdTask = nil
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        withAnimation(.easeOut(duration: 0.3)) { completed = true }
+        try? await Task.sleep(for: .seconds(0.85))
+        onComplete()
+    }
+}
 
