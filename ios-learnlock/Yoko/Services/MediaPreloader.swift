@@ -26,7 +26,7 @@ final class GIFCache: @unchecked Sendable {
 }
 
 enum MediaPreloader {
-    static let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
+    static let base = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs"
 
     /// All mascot/onboarding GIFs that should be ready before the user reaches
     /// the screens that show them.

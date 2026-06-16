@@ -22,10 +22,10 @@ struct LessonCompleteView: View {
     @State private var revealRewards: Bool = false
     @State private var screenHeight: CGFloat = 852
 
-    private let heroURL = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/UnlockScreen.png"
+    private let heroURL = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/images/UnlockScreen.png"
 
     private var mascotURL: String {
-        let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
+        let base = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs"
         return result.isPerfect ? "\(base)/ExcitedGIF.gif" : "\(base)/ProudGIF.gif"
     }
 

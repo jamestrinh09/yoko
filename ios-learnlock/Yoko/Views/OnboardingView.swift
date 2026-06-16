@@ -626,7 +626,7 @@ struct OnboardingView: View {
                 .font(.dsBody)
                 .foregroundStyle(DS.Color.textSecondary)
 
-            RoundedImageCard(url: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ability%20to%20focus%20and%20recall.png") {
+            RoundedImageCard(url: "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/images/ability%20to%20focus%20and%20recall.png") {
                 withAnimation(.easeIn(duration: 0.3)) { imageLoaded11 = true }
             }
 
@@ -688,7 +688,7 @@ struct OnboardingView: View {
     private func Step14() -> some View {
         VStack(spacing: 24) {
             MascotGIF(
-                url: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/GlassesGIF.gif",
+                url: "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/GlassesGIF.gif",
                 size: 198
             )
                 .frame(maxWidth: .infinity)
@@ -1137,7 +1137,7 @@ struct DemoQuestionScreen: View {
     }
 
     private var mascotURL: String {
-        let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
+        let base = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs"
         switch mascotMood {
         case .happy: return "\(base)/HappyGIF.gif"
         case .thinking: return "\(base)/ThinkingGIF.gif"
@@ -1230,7 +1230,7 @@ struct DemoQuestionScreen: View {
     private var splitBackground: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                AsyncImage(url: URL(string: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/UnlockScreen.png")) { phase in
+                AsyncImage(url: URL(string: "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/images/UnlockScreen.png")) { phase in
                     if let image = phase.image {
                         image
                             .resizable()
@@ -1959,7 +1959,7 @@ struct FadeInText: View {
 // MARK: - GIF Helpers
 
 private func mascotGIF(_ mood: MascotMood) -> String {
-    let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
+    let base = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs"
     switch mood {
     case .happy: return "\(base)/HappyGIF.gif"
     case .thinking: return "\(base)/ThinkingGIF.gif"
@@ -1971,7 +1971,7 @@ private func mascotGIF(_ mood: MascotMood) -> String {
 }
 
 private func onboardingImage(_ name: OnboardingImage) -> String {
-    let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
+    let base = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/images"
     switch name {
     case .lookingAtIpad: return "\(base)/LookingatIPAD.png"
     case .behindPov: return "\(base)/BehindPOV.png"

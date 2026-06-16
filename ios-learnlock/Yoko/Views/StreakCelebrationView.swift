@@ -17,7 +17,7 @@ struct StreakCelebrationView: View {
     @State private var appear: Bool = false
     @State private var flameScale: CGFloat = 0.4
 
-    private let mascotURL = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ExcitedGIF.gif"
+    private let mascotURL = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/ExcitedGIF.gif"
 
     private var streakUnit: String { streak == 1 ? "day" : "days" }
 

@@ -34,7 +34,7 @@ enum AssetURLs {
     // MARK: - Images (Rork / Supabase interim)
 
     /// Interim Supabase host for onboarding/background images.
-    static let imageBase = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
+    static let imageBase = "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/images"
 
     static func image(_ name: String) -> String { "\(imageBase)/\(name)" }
 

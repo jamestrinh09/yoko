@@ -83,7 +83,7 @@ struct LessonPlayerView: View {
     private var splitBackground: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                AsyncImage(url: URL(string: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/UnlockScreen.png")) { phase in
+                AsyncImage(url: URL(string: "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/images/UnlockScreen.png")) { phase in
                     if let image = phase.image {
                         image
                             .resizable()
@@ -314,19 +314,19 @@ struct LessonPlayerView: View {
     private var mascotURL: String {
         if showSummary {
             return wrongCount > lesson.questions.count / 2
-                ? "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ProudGIF.gif"
-                : "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ExcitedGIF.gif"
+                ? "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/ProudGIF.gif"
+                : "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/ExcitedGIF.gif"
         }
         if lastAnswerWasWrong {
-            return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/SadGIF.gif"
+            return "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/SadGIF.gif"
         }
         if index == lesson.questions.count - 1 {
-            return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/DeterminedGIF.gif"
+            return "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/DeterminedGIF.gif"
         }
         if index == 1 {
-            return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ThinkingGIF.gif"
+            return "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/ThinkingGIF.gif"
         }
-        return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/HappyGIF.gif"
+        return "https://raw.githubusercontent.com/jamestrinh09/yoko/main/assets/gifs/HappyGIF.gif"
     }
 
     // MARK: - Bottom Footer
