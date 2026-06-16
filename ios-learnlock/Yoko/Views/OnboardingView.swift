@@ -6,6 +6,7 @@
 import SwiftUI
 import UserNotifications
 import FamilyControls
+import StoreKit
 
 struct OnboardingView: View {
     @Environment(AppStore.self) private var store
@@ -26,11 +27,11 @@ struct OnboardingView: View {
     @State private var imageLoaded11 = false
     @State private var imageLoaded13 = false
 
-    private let totalSteps = 24
+    private let totalSteps = 23
 
     var body: some View {
         Group {
-            if step == 24 {
+            if step == 23 {
                 commitmentScreen
             } else if isDemoQuestionStep {
                 demoQuestionScreen
@@ -48,7 +49,7 @@ struct OnboardingView: View {
     }
 
     private var isDemoQuestionStep: Bool {
-        step == 15 || step == 16 || step == 17
+        step == 14 || step == 15 || step == 16
     }
 
     // MARK: - Commitment Screen
@@ -135,9 +136,9 @@ struct OnboardingView: View {
 
     private var stepBackground: some View {
         Group {
-            if step == 1 || step == 12 || step == 18 || step == 21 {
+            if step == 1 || step == 17 || step == 20 {
                 LinearGradient(
-                    colors: step == 12 || step == 21
+                    colors: step == 20
                         ? [Color(red: 1.0, green: 0.69, blue: 0.0), DS.Color.accent, Color(red: 1.0, green: 0.54, blue: 0.12), DS.Color.accent]
                         : [Color(red: 1.0, green: 0.69, blue: 0.0), DS.Color.accent, Color(red: 1.0, green: 0.69, blue: 0.6), Color(red: 1.0, green: 0.94, blue: 0.9), .white],
                     startPoint: .top,
@@ -150,7 +151,7 @@ struct OnboardingView: View {
     }
 
     private var isGradientStep: Bool {
-        step == 1 || step == 12 || step == 18 || step == 21
+        step == 1 || step == 17 || step == 20
     }
 
     // MARK: - Step Content
@@ -180,7 +181,6 @@ struct OnboardingView: View {
         case 20: Step20()
         case 21: Step21()
         case 22: Step22()
-        case 23: Step23()
         default: EmptyView()
         }
     }
@@ -212,19 +212,17 @@ struct OnboardingView: View {
             PrimaryButton(label: "Continue", action: nextStep)
         case 11:
             PrimaryButton(label: "Continue", action: nextStep)
-        case 12:
-            PrimaryButton(label: "Continue", action: nextStep, variant: .white)
-        case 14:
+        case 13:
             PrimaryButton(label: "let's learn 🤩", action: nextStep)
+        case 17:
+            PrimaryButton(label: "Continue", action: requestReviewThenNext)
         case 18:
-            PrimaryButton(label: "Continue", action: nextStep)
-        case 19:
             PrimaryButton(label: "Use this rule", action: nextStep)
-        case 20:
+        case 19:
             PrimaryButton(label: "Continue", action: nextStep)
-        case 21:
+        case 20:
             PrimaryButton(label: "Continue", action: nextStep, variant: .white)
-        case 22:
+        case 21:
             VStack(spacing: 12) {
                 PrimaryButton(
                     label: screenTime.isAuthorized ? "Continue" : (screenTime.isRequesting ? "Requesting…" : "Enable Screen Time"),
@@ -237,13 +235,8 @@ struct OnboardingView: View {
                         .foregroundStyle(DS.Color.textSecondary)
                 }
             }
-        case 23:
-            VStack(spacing: 12) {
-                PrimaryButton(label: "Turn on notifications", action: requestNotificationsThenFinish)
-                Button("Not now", action: nextStep)
-                    .font(.dsCallout)
-                    .foregroundStyle(DS.Color.textSecondary)
-            }
+        case 22:
+            PrimaryButton(label: "Turn on notifications", action: requestNotificationsThenFinish)
         default:
             EmptyView()
         }
@@ -257,6 +250,16 @@ struct OnboardingView: View {
         withAnimation(.spring(duration: 0.35)) {
             step = min(step + 1, totalSteps)
         }
+    }
+
+    /// Triggers the native App Store review prompt before advancing past the
+    /// Lesson Completed step, then continues onboarding.
+    private func requestReviewThenNext() {
+        if let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
+        }
+        nextStep()
     }
 
     private func validateAndNext4() {
@@ -328,13 +331,6 @@ struct OnboardingView: View {
                     + Text("learning")
                     .font(.system(size: 26, weight: .heavy, design: .rounded))
                     .foregroundStyle(DS.Color.accent)
-                Text("Yoko puts learning first to ")
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
-                + Text("unlock")
-                    .font(.system(size: 26, weight: .heavy, design: .rounded))
-                    .foregroundStyle(DS.Color.accent)
-                + Text(" play")
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
             }
             .lineSpacing(6)
             .opacity(imageLoaded2 ? 1 : 0)
@@ -649,21 +645,6 @@ struct OnboardingView: View {
     // MARK: - Step 12
 
     private func Step12() -> some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Color.clear.frame(height: 20)
-            FadeInText(text: "It doesn't have to be a fight", delay: 0.2)
-                .font(.system(size: 32, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-            FadeInText(text: "\(childName.isEmpty ? "Your child" : childName) can still enjoy screen time with learning as the first step.", delay: 1.0)
-                .font(.system(size: 32, weight: .semibold, design: .rounded))
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, 8)
-    }
-
-    // MARK: - Step 13
-
-    private func Step13() -> some View {
         VStack(spacing: 20) {
             Color.clear.frame(height: 0)
             RoundedImageCard(localName: "AppBlockDemo", showBorder: false) {
@@ -687,9 +668,9 @@ struct OnboardingView: View {
         .padding(.top, -50)
     }
 
-    // MARK: - Step 14
+    // MARK: - Step 13
 
-    private func Step14() -> some View {
+    private func Step13() -> some View {
         VStack(spacing: 24) {
             MascotGIF(url: GIFAssets.armor, size: 198)
                 .frame(maxWidth: .infinity)
@@ -711,24 +692,24 @@ struct OnboardingView: View {
         .padding(.top, 55)
     }
 
-    // MARK: - Step 15-17 (rendered via demoQuestionScreen)
+    // MARK: - Step 14-16 (rendered via demoQuestionScreen)
 
+    private func Step14() -> some View { EmptyView() }
     private func Step15() -> some View { EmptyView() }
     private func Step16() -> some View { EmptyView() }
-    private func Step17() -> some View { EmptyView() }
 
     private func demoNormalizedQuestion(for step: Int) -> NormalizedQuestion {
         switch step {
         // Q1 — Kindergarten counting: 12 frogs in 3×4 array — count or multiply.
-        case 15: return CurriculumSystem.sampleMathQuestions[25]
+        case 14: return CurriculumSystem.sampleMathQuestions[25]
 
         // Q2 — Grade 1 Make Ten: ten-frame with 7 filled orange dots.
         //      The most visually distinctive math component — shows parents
         //      this is a real learning tool, not just text questions.
-        case 16: return CurriculumSystem.sampleMathQuestions[6]
+        case 15: return CurriculumSystem.sampleMathQuestions[6]
 
         // Q3 — Grade 2 unscramble "monkey" 🐒: scrambled letter chips into word slots.
-        case 17: return CurriculumSystem.sampleEnglishQuestions[30]
+        case 16: return CurriculumSystem.sampleEnglishQuestions[30]
 
         default: return CurriculumSystem.sampleMathQuestions[20]
         }
@@ -736,9 +717,9 @@ struct OnboardingView: View {
 
     private func demoQuestionSelectionBinding() -> Binding<String?> {
         switch step {
-        case 15: return $q1
-        case 16: return $q2
-        case 17: return $q3
+        case 14: return $q1
+        case 15: return $q2
+        case 16: return $q3
         default: return .constant(nil)
         }
     }
@@ -746,7 +727,7 @@ struct OnboardingView: View {
     @ViewBuilder
     private var demoQuestionScreen: some View {
         let normalized = demoNormalizedQuestion(for: step)
-        let questionNum = step - 14
+        let questionNum = step - 13
         DemoQuestionScreen(
             normalized: normalized,
             questionNum: questionNum,
@@ -759,16 +740,16 @@ struct OnboardingView: View {
         .id(step)
     }
 
-    // MARK: - Step 18 (Streak)
+    // MARK: - Step 17 (Streak)
 
-    private func Step18() -> some View {
+    private func Step17() -> some View {
         VStack(spacing: 14) {
             Color.clear.frame(height: 0)
             SequencedStreakGIFView(firstURL: GIFAssets.streak1, loopURL: GIFAssets.streak2)
                 .frame(width: 246, height: 246)
                 .frame(maxWidth: .infinity)
 
-            StreakRevealText(text: "1 day streak!", size: 30, color: .white)
+            StreakRevealText(text: "Lesson Completed! 🎉", size: 30, color: .white)
                 .padding(.top, -18)
 
             HStack {
@@ -804,9 +785,9 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 19 (Unlock Rule)
+    // MARK: - Step 18 (Unlock Rule)
 
-    private func Step19() -> some View {
+    private func Step18() -> some View {
         VStack(alignment: .leading, spacing: 20) {
             MascotGIF(url: GIFAssets.lockStanding, size: 158)
                 .frame(maxWidth: .infinity)
@@ -837,9 +818,9 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 20 (Creating Plan)
+    // MARK: - Step 19 (Creating Plan)
 
-    private func Step20() -> some View {
+    private func Step19() -> some View {
         PlanCreationView(
             childName: childName.isEmpty ? "Your child" : childName,
             gradeText: gradeLabel(grade),
@@ -847,9 +828,9 @@ struct OnboardingView: View {
         )
     }
 
-    // MARK: - Step 21 (Pre-paywall)
+    // MARK: - Step 20 (Pre-paywall)
 
-    private func Step21() -> some View {
+    private func Step20() -> some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("You know what would help \(childName.isEmpty ? "your child" : childName)")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
@@ -914,9 +895,9 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Step 22 (Screen Time permission)
+    // MARK: - Step 21 (Screen Time permission)
 
-    private func Step22() -> some View {
+    private func Step21() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
             Image("ScreenTimeConnect")
@@ -926,11 +907,11 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
-                Text("Connect Yoko to screen time")
+                Text("Turn on Screen Time")
                     .font(.dsTitle)
                     .foregroundStyle(DS.Color.textPrimary)
                     .multilineTextAlignment(.center)
-                Text("Yoko uses Apple Screen Time to pause \(nameDisplay)'s games and videos until learning is done.")
+                Text("This is what makes Yoko work — without it we can't lock any of \(nameDisplay)'s apps.")
                     .font(.dsBody)
                     .foregroundStyle(DS.Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -974,9 +955,9 @@ struct OnboardingView: View {
         .padding(.top, 12)
     }
 
-    // MARK: - Step 23 (Notifications permission)
+    // MARK: - Step 22 (Notifications permission)
 
-    private func Step23() -> some View {
+    private func Step22() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
             Image("NotificationIcon")
@@ -989,11 +970,11 @@ struct OnboardingView: View {
                 .offset(y: -20)
 
             VStack(spacing: 10) {
-                Text("Allow Yoko to send notifications")
+                Text("Turn on notifications")
                     .font(.dsTitle)
                     .foregroundStyle(DS.Color.textPrimary)
                     .multilineTextAlignment(.center)
-                Text("We use this to allow \(nameDisplay) to unblock their apps when they need to learn.")
+                Text("This is how \(nameDisplay) unlocks their apps — it's the unlock trigger, not optional.")
                     .font(.dsBody)
                     .foregroundStyle(DS.Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -1397,7 +1378,7 @@ struct DemoQuestionScreen: View {
     }
 }
 
-// MARK: - Plan Creation (Step 20)
+// MARK: - Plan Creation (Step 19)
 
 struct PlanCreationView: View {
     let childName: String
