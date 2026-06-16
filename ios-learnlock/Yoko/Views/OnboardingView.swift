@@ -626,7 +626,7 @@ struct OnboardingView: View {
                 .font(.dsBody)
                 .foregroundStyle(DS.Color.textSecondary)
 
-            RoundedImageCard(url: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ability%20to%20focus%20and%20recall.png") {
+            RoundedImageCard(localName: "AbilityToFocusAndRecall") {
                 withAnimation(.easeIn(duration: 0.3)) { imageLoaded11 = true }
             }
 
@@ -663,7 +663,7 @@ struct OnboardingView: View {
     private func Step13() -> some View {
         VStack(spacing: 20) {
             Color.clear.frame(height: 0)
-            RoundedImageCard(url: onboardingImage(.appBlockDemo), showBorder: false) {
+            RoundedImageCard(localName: "AppBlockDemo", showBorder: false) {
                 withAnimation(.easeIn(duration: 0.3)) { imageLoaded13 = true }
             }
             .overlay(
