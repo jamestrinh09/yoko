@@ -671,7 +671,7 @@ struct OnboardingView: View {
                     .font(.system(size: 32, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
-                    .padding(.top, 86)
+                    .padding(.top, 96)
                     .opacity(imageLoaded13 ? 1 : 0)
                     .animation(.easeIn(duration: 0.3), value: imageLoaded13)
                 , alignment: .top
@@ -760,7 +760,8 @@ struct OnboardingView: View {
     private func Step18() -> some View {
         VStack(spacing: 18) {
             Color.clear.frame(height: 0)
-            MascotGIF(url: mascotGIF(.excited), size: 178)
+            SequencedStreakGIFView(firstURL: GIFAssets.streak1, loopURL: GIFAssets.streak2)
+                .frame(width: 178, height: 178)
                 .frame(maxWidth: .infinity)
 
             Text("1")
@@ -919,7 +920,10 @@ struct OnboardingView: View {
     private func Step22() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            MascotGIF(url: mascotGIF(.determined), size: 149)
+            Image("ScreenTimeConnect")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 132)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
@@ -976,11 +980,12 @@ struct OnboardingView: View {
     private func Step23() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            Image("NotificationsHero")
+            Image("NotificationIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 198, height: 149)
+                .frame(height: 110)
                 .frame(maxWidth: .infinity)
+                .padding(.horizontal, 8)
 
             VStack(spacing: 10) {
                 Text("Allow Yoko to send notifications")
@@ -1150,8 +1155,10 @@ struct DemoQuestionScreen: View {
                     VStack(spacing: 0) {
                         // Reserve the same top spacing the lesson player uses so
                         // the mascot + content land at an identical position and
-                        // the progress bar never pushes the hero down.
-                        Color.clear.frame(height: screenHeight * 0.06)
+                        // the progress bar never pushes the hero down. The +36
+                        // matches the lesson player's close-button row height so
+                        // the hero region is exactly the same size in both.
+                        Color.clear.frame(height: screenHeight * 0.06 + 36)
 
                         MascotGIF(url: mascotURL, size: 162)
                             .padding(.top, -9)

@@ -139,7 +139,7 @@ struct StreakCelebrationView: View {
 
 /// Plays the intro streak GIF once, then transitions into a second GIF that
 /// loops forever. ImageIO-backed so transparency and frame timing are exact.
-private struct SequencedStreakGIFView: UIViewRepresentable {
+struct SequencedStreakGIFView: UIViewRepresentable {
     let firstURL: String
     let loopURL: String
 
