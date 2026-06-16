@@ -316,7 +316,7 @@ struct OnboardingView: View {
 
     private func Step2() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            RoundedImageCard(url: onboardingImage(.lookingAtIpad)) {
+            RoundedImageCard(localName: "LookingAtIPAD") {
                 withAnimation(.easeIn(duration: 0.3)) { imageLoaded2 = true }
             }
             Group {
@@ -344,7 +344,7 @@ struct OnboardingView: View {
 
     private func Step3() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            RoundedImageCard(url: onboardingImage(.behindPov)) {
+            RoundedImageCard(localName: "BehindPOV") {
                 withAnimation(.easeIn(duration: 0.3)) { imageLoaded3 = true }
             }
             Group {
@@ -1220,21 +1220,15 @@ struct DemoQuestionScreen: View {
     private var splitBackground: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                AsyncImage(url: URL(string: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/UnlockScreen.png")) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .scaleEffect(1.05)
-                            .offset(y: -54)
-                            .onAppear {
-                                withAnimation(.easeIn(duration: 0.25)) { bgLoaded = true }
-                            }
-                    } else {
-                        Color(red: 0.35, green: 0.55, blue: 0.30)
+                Image("HeroBackground")
+                    .resizable()
+                    .scaledToFill()
+                    .scaleEffect(1.05)
+                    .offset(y: -54)
+                    .clipped()
+                    .onAppear {
+                        withAnimation(.easeIn(duration: 0.25)) { bgLoaded = true }
                     }
-                }
-                .clipped()
 
                 LinearGradient(
                     colors: [.clear, .white.opacity(0.95)],
@@ -1788,23 +1782,28 @@ struct SelectableRow: View {
 }
 
 struct RoundedImageCard: View {
-    let url: String
+    var url: String? = nil
+    var localName: String? = nil
     var showBorder: Bool = true
     var onLoaded: (() -> Void)? = nil
     @State private var loaded = false
 
+    private func styled(_ image: Image) -> some View {
+        image
+            .resizable()
+            .scaledToFit()
+            .clipShape(.rect(cornerRadius: 24))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(showBorder ? DS.Color.accent : Color.clear, lineWidth: 3)
+            )
+            .shadow(color: showBorder ? DS.Color.accent.opacity(0.2) : Color.black.opacity(0.08), radius: 14, x: 0, y: 6)
+    }
+
     var body: some View {
-        AsyncImage(url: URL(string: url)) { phase in
-            if let image = phase.image {
-                image
-                    .resizable()
-                    .scaledToFit()
-                    .clipShape(.rect(cornerRadius: 24))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 24)
-                            .stroke(showBorder ? DS.Color.accent : Color.clear, lineWidth: 3)
-                    )
-                    .shadow(color: showBorder ? DS.Color.accent.opacity(0.2) : Color.black.opacity(0.08), radius: 14, x: 0, y: 6)
+        Group {
+            if let localName {
+                styled(Image(localName))
                     .onAppear {
                         withAnimation(.easeIn(duration: 0.3)) {
                             loaded = true
@@ -1812,7 +1811,19 @@ struct RoundedImageCard: View {
                         }
                     }
             } else {
-                Color.clear.frame(height: 0)
+                AsyncImage(url: URL(string: url ?? "")) { phase in
+                    if let image = phase.image {
+                        styled(image)
+                            .onAppear {
+                                withAnimation(.easeIn(duration: 0.3)) {
+                                    loaded = true
+                                    onLoaded?()
+                                }
+                            }
+                    } else {
+                        Color.clear.frame(height: 0)
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity)

@@ -22,8 +22,6 @@ struct LessonCompleteView: View {
     @State private var revealRewards: Bool = false
     @State private var screenHeight: CGFloat = 852
 
-    private let heroURL = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/UnlockScreen.png"
-
     private var mascotURL: String {
         result.isPerfect ? GIFAssets.excited : GIFAssets.proud
     }
@@ -71,14 +69,9 @@ struct LessonCompleteView: View {
     private var background: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                AsyncImage(url: URL(string: heroURL)) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill().scaleEffect(1.05).offset(y: -29)
-                    } else {
-                        Color(red: 0.35, green: 0.55, blue: 0.30)
-                    }
-                }
-                .clipped()
+                Image("HeroBackground")
+                    .resizable().scaledToFill().scaleEffect(1.05).offset(y: -29)
+                    .clipped()
                 LinearGradient(colors: [.clear, .white.opacity(0.95)], startPoint: .top, endPoint: .bottom)
                     .frame(height: 110)
             }

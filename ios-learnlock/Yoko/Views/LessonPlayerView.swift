@@ -83,18 +83,12 @@ struct LessonPlayerView: View {
     private var splitBackground: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                AsyncImage(url: URL(string: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/UnlockScreen.png")) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .scaleEffect(1.05)
-                            .offset(y: -54)
-                    } else {
-                        Color(red: 0.35, green: 0.55, blue: 0.30)
-                    }
-                }
-                .clipped()
+                Image("HeroBackground")
+                    .resizable()
+                    .scaledToFill()
+                    .scaleEffect(1.05)
+                    .offset(y: -54)
+                    .clipped()
 
                 LinearGradient(
                     colors: [.clear, .white.opacity(0.95)],
