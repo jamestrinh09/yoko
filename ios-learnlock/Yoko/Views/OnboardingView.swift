@@ -672,6 +672,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
                     .padding(.top, 96)
+                    .offset(y: 10)
                     .opacity(imageLoaded13 ? 1 : 0)
                     .animation(.easeIn(duration: 0.3), value: imageLoaded13)
                 , alignment: .top
@@ -695,7 +696,7 @@ struct OnboardingView: View {
                     .font(.system(size: 32, weight: .heavy, design: .rounded))
                     .foregroundStyle(DS.Color.textPrimary)
 
-                Text("Let's demo the unlock flow so you can see what learning for \(childName.isEmpty ? "your child" : childName) will be like!")
+                Text("Let's demo what learning for \(childName.isEmpty ? "your child" : childName) could be like!")
                     .font(.system(size: 22, weight: .medium, design: .rounded))
                     .foregroundStyle(DS.Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -758,20 +759,14 @@ struct OnboardingView: View {
     // MARK: - Step 18 (Streak)
 
     private func Step18() -> some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 14) {
             Color.clear.frame(height: 0)
             SequencedStreakGIFView(firstURL: GIFAssets.streak1, loopURL: GIFAssets.streak2)
-                .frame(width: 178, height: 178)
+                .frame(width: 214, height: 214)
                 .frame(maxWidth: .infinity)
 
-            Text("1")
-                .font(.system(size: 80, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.top, -16)
-            Text("day streak!")
-                .font(.system(size: 28, weight: .heavy, design: .rounded))
-                .foregroundStyle(.white)
-                .padding(.top, -10)
+            StreakRevealText(text: "1 day streak!", size: 28, color: .white)
+                .padding(.top, -18)
 
             HStack {
                 ForEach(["M", "T", "W", "T", "F", "S", "S"], id: \.self) { day in
@@ -983,7 +978,7 @@ struct OnboardingView: View {
             Image("NotificationIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 110)
+                .frame(height: 220)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 8)
 
@@ -1162,6 +1157,7 @@ struct DemoQuestionScreen: View {
 
                         MascotGIF(url: mascotURL, size: 162)
                             .padding(.top, -9)
+                            .offset(y: -15)
                             .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
                         contentArea
@@ -1231,7 +1227,7 @@ struct DemoQuestionScreen: View {
                     .resizable()
                     .scaledToFill()
                     .scaleEffect(1.05)
-                    .offset(y: -54)
+                    .offset(y: -64)
                     .clipped()
                     .onAppear {
                         withAnimation(.easeIn(duration: 0.25)) { bgLoaded = true }
@@ -1287,7 +1283,7 @@ struct DemoQuestionScreen: View {
             )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: -4)
-        .padding(.top, -13)
+        .padding(.top, -23)
     }
 
     private func evaluate() {
@@ -2006,6 +2002,7 @@ struct CommitmentScreen: View {
     @State private var holdTask: Task<Void, Never>? = nil
     @State private var completed: Bool = false
     @State private var pulse: Bool = false
+    @State private var thumbCenter: CGPoint = .zero
 
     private var hasSignature: Bool { !strokes.isEmpty || currentStroke.count > 2 }
 
@@ -2021,40 +2018,20 @@ struct CommitmentScreen: View {
 
     var body: some View {
         GeometryReader { geo in
-            let thumbCenter = CGPoint(x: geo.size.width / 2, y: geo.size.height - 132)
             let coverScale = (2 * hypot(geo.size.width, geo.size.height)) / 96 + 1
+            let fallbackCenter = CGPoint(x: geo.size.width / 2, y: geo.size.height - 132)
 
             ZStack {
                 DS.Color.background.ignoresSafeArea()
-
-                // Warm glow behind the fingerprint that intensifies as the parent holds.
-                RadialGradient(
-                    colors: [DS.Color.accent.opacity(0.16 + fillProgress * 0.28), .clear],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: 230
-                )
-                .frame(width: 460, height: 460)
-                .position(thumbCenter)
-                .allowsHitTesting(false)
-                .ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     topBar
 
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 18) {
-                            MascotGIF(url: mascotGIF(.proud), size: 122)
+                            MascotGIF(url: GIFAssets.glasses, size: 122)
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 2)
-
-                            Text("the parent promise")
-                                .font(.system(size: 13, weight: .heavy, design: .rounded))
-                                .foregroundStyle(DS.Color.accent)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 7)
-                                .background(DS.Color.accentSoft)
-                                .clipShape(.capsule)
 
                             Text("Commit to putting \(possessive) education first")
                                 .font(.system(size: 28, weight: .heavy, design: .rounded))
@@ -2062,35 +2039,46 @@ struct CommitmentScreen: View {
                                 .multilineTextAlignment(.center)
                                 .lineSpacing(3)
 
-                            Text("Sign below as your promise to help \(childDisplay) learn a little every day.")
-                                .font(.dsBody)
-                                .foregroundStyle(DS.Color.textSecondary)
-                                .multilineTextAlignment(.center)
-                                .lineSpacing(4)
-                                .padding(.horizontal, 8)
-
                             signatureCard
+
+                            if hasSignature {
+                                VStack(spacing: 8) {
+                                    Text(holdTask != nil ? "Keep holding…" : "Tap and hold")
+                                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(DS.Color.accent)
+                                        .contentTransition(.opacity)
+                                        .animation(.easeInOut(duration: 0.2), value: holdTask != nil)
+
+                                    thumbButton
+                                        .background(
+                                            GeometryReader { g in
+                                                Color.clear.preference(
+                                                    key: ThumbCenterKey.self,
+                                                    value: CGPoint(
+                                                        x: g.frame(in: .named("commit")).midX,
+                                                        y: g.frame(in: .named("commit")).midY
+                                                    )
+                                                )
+                                            }
+                                        )
+                                }
+                                .padding(.top, 20)
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            }
                         }
                         .padding(.horizontal, 24)
                         .padding(.top, 4)
-                        .padding(.bottom, 280)
+                        .padding(.bottom, 60)
                     }
                 }
-
-                // Hold-to-commit fingerprint, pinned above the bottom edge.
-                thumbLabel
-                    .position(x: thumbCenter.x, y: thumbCenter.y - 82)
-                    .opacity(completed ? 0 : 1)
-
-                thumbButton
-                    .position(thumbCenter)
+                .animation(.spring(duration: 0.4), value: hasSignature)
 
                 // The expanding circle that fills the screen as the hold completes.
                 Circle()
                     .fill(DS.Color.accent)
                     .frame(width: 96, height: 96)
                     .scaleEffect(max(0.001, fillProgress * coverScale), anchor: .center)
-                    .position(thumbCenter)
+                    .position(thumbCenter == .zero ? fallbackCenter : thumbCenter)
                     .opacity(fillProgress > 0.001 ? 1 : 0)
                     .allowsHitTesting(false)
 
@@ -2115,6 +2103,8 @@ struct CommitmentScreen: View {
                     .allowsHitTesting(false)
                 }
             }
+            .coordinateSpace(name: "commit")
+            .onPreferenceChange(ThumbCenterKey.self) { thumbCenter = $0 }
         }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear {
@@ -2176,7 +2166,7 @@ struct CommitmentScreen: View {
                 if !hasSignature {
                     Text("Sign here")
                         .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundStyle(DS.Color.textTertiary)
+                        .foregroundStyle(DS.Color.accent)
                         .allowsHitTesting(false)
                 }
 
@@ -2185,9 +2175,9 @@ struct CommitmentScreen: View {
                     HStack(spacing: 10) {
                         Text("✕")
                             .font(.system(size: 15, weight: .heavy, design: .rounded))
-                            .foregroundStyle(DS.Color.textTertiary)
+                            .foregroundStyle(DS.Color.accent)
                         Rectangle()
-                            .fill(DS.Color.border)
+                            .fill(DS.Color.accent)
                             .frame(height: 1.5)
                     }
                     .padding(.horizontal, 24)
@@ -2202,14 +2192,9 @@ struct CommitmentScreen: View {
                 RoundedRectangle(cornerRadius: DS.Radius.large)
                     .stroke(DS.Color.border, lineWidth: 1)
             )
+            .shadow(color: DS.Color.accent.opacity(completed ? 0 : 0.30), radius: 22, y: 6)
 
             HStack(spacing: 8) {
-                Image(systemName: "signature")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(DS.Color.textTertiary)
-                Text("Parent signature")
-                    .font(.dsCaption)
-                    .foregroundStyle(DS.Color.textTertiary)
                 Spacer()
                 if hasSignature {
                     Button {
@@ -2228,21 +2213,6 @@ struct CommitmentScreen: View {
             }
             .padding(.horizontal, 4)
         }
-    }
-
-    private var thumbLabel: some View {
-        VStack(spacing: 3) {
-            Text(holdTask != nil ? "Keep holding…" : "Tap and hold")
-                .font(.system(size: 15, weight: .heavy, design: .rounded))
-                .foregroundStyle(hasSignature ? DS.Color.accent : DS.Color.textTertiary)
-                .contentTransition(.opacity)
-            if !hasSignature {
-                Text("Sign first to confirm")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                    .foregroundStyle(DS.Color.textTertiary)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: holdTask != nil)
     }
 
     private var accentGradient: LinearGradient {
@@ -2331,6 +2301,14 @@ struct CommitmentScreen: View {
         withAnimation(.easeOut(duration: 0.3)) { completed = true }
         try? await Task.sleep(for: .seconds(0.85))
         onComplete()
+    }
+}
+
+private struct ThumbCenterKey: PreferenceKey {
+    static var defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
+        let next = nextValue()
+        if next != .zero { value = next }
     }
 }
 

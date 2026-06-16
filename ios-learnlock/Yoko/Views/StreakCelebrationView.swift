@@ -14,7 +14,6 @@ struct StreakCelebrationView: View {
     let onContinue: () -> Void
 
     @State private var appear: Bool = false
-    @State private var flameScale: CGFloat = 0.4
 
 
 
@@ -64,31 +63,13 @@ struct StreakCelebrationView: View {
     // MARK: - Streak Card
 
     private var streakCard: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 14) {
             SequencedStreakGIFView(firstURL: GIFAssets.streak1, loopURL: GIFAssets.streak2)
-                .frame(width: 150, height: 150)
+                .frame(width: 180, height: 180)
                 .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
 
-            HStack(spacing: 10) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 40, weight: .heavy))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color(red: 1.0, green: 0.72, blue: 0.20), DS.Color.accent],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .scaleEffect(flameScale)
-                Text("\(streak)")
-                    .font(.system(size: 64, weight: .heavy, design: .rounded))
-                    .foregroundStyle(DS.Color.textPrimary)
-                    .contentTransition(.numericText())
-            }
-
-            Text("\(streak)-\(streakUnit) streak!")
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .foregroundStyle(DS.Color.accent)
+            StreakRevealText(text: "\(streak) \(streakUnit) streak!", size: 24, color: DS.Color.accent)
+                .padding(.top, -10)
 
             Text(message)
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
@@ -130,8 +111,32 @@ struct StreakCelebrationView: View {
 
     private func animateIn() {
         withAnimation(.spring(duration: 0.55, bounce: 0.35)) { appear = true }
-        withAnimation(.spring(duration: 0.7, bounce: 0.5).delay(0.15)) { flameScale = 1.0 }
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+}
+
+// MARK: - Left-to-Right Reveal Text
+
+/// Animates a string in character-by-character from left to right with a soft
+/// fade + slide, so the streak label reads in like a sweep when the view opens.
+struct StreakRevealText: View {
+    let text: String
+    var size: CGFloat = 24
+    var color: Color = .white
+    @State private var appeared = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(text.enumerated()), id: \.offset) { idx, ch in
+                Text(String(ch))
+                    .font(.system(size: size, weight: .heavy, design: .rounded))
+                    .foregroundStyle(color)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(x: appeared ? 0 : -10)
+                    .animation(.easeOut(duration: 0.35).delay(Double(idx) * 0.045), value: appeared)
+            }
+        }
+        .onAppear { appeared = true }
     }
 }
 
