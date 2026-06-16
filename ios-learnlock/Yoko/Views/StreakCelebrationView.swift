@@ -27,6 +27,7 @@ struct StreakCelebrationView: View {
                 streakCard
                     .scaleEffect(appear ? 1 : 0.85)
                     .opacity(appear ? 1 : 0)
+                    .offset(y: 6)
                 Spacer(minLength: 0)
                 continueButton
             }
@@ -65,10 +66,10 @@ struct StreakCelebrationView: View {
     private var streakCard: some View {
         VStack(spacing: 14) {
             SequencedStreakGIFView(firstURL: GIFAssets.streak1, loopURL: GIFAssets.streak2)
-                .frame(width: 180, height: 180)
+                .frame(width: 207, height: 207)
                 .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
 
-            StreakRevealText(text: "\(streak) \(streakUnit) streak!", size: 24, color: DS.Color.accent)
+            StreakRevealText(text: "\(streak) \(streakUnit) streak!", size: 26, color: DS.Color.accent)
                 .padding(.top, -10)
 
             Text(message)

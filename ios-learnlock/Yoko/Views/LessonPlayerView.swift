@@ -87,7 +87,7 @@ struct LessonPlayerView: View {
                     .resizable()
                     .scaledToFill()
                     .scaleEffect(1.05)
-                    .offset(y: -64)
+                    .offset(y: -72)
                     .clipped()
 
                 LinearGradient(
@@ -121,7 +121,7 @@ struct LessonPlayerView: View {
             mascotImage(urlString: mascotURL)
                 .frame(width: 162, height: 162)
                 .padding(.top, -9)
-                .offset(y: -15)
+                .offset(y: -30)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
             // White content area with rounded top corners layered over hero (up 15pt)
@@ -200,7 +200,7 @@ struct LessonPlayerView: View {
             )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: -4)
-        .padding(.top, -23)
+        .padding(.top, -31)
     }
 
     // MARK: - Scroll Hint

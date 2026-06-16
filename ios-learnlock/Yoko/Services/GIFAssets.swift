@@ -20,8 +20,9 @@ enum GIFAssets {
     static let armor = "https://res.cloudinary.com/dpx2bh9tw/image/upload/v1781582389/armorGIF_wmcovd.gif"
     static let streak1 = "https://res.cloudinary.com/dpx2bh9tw/image/upload/v1781582384/StreakGIF1_jyclxd.gif"
     static let streak2 = "https://res.cloudinary.com/dpx2bh9tw/image/upload/v1781582384/StreakGIF2_jenk4n.gif"
+    static let lockStanding = "https://res.cloudinary.com/dpx2bh9tw/image/upload/v1781588482/lockstandingGIF_twy5nk.gif"
 
     static var all: [String] {
-        [happy, thinking, determined, sad, excited, proud, glasses, armor, streak1, streak2]
+        [happy, thinking, determined, sad, excited, proud, glasses, armor, streak1, streak2, lockStanding]
     }
 }

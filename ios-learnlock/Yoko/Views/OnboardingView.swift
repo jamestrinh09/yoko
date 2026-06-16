@@ -273,6 +273,7 @@ struct OnboardingView: View {
     private func completeOnboarding() {
         let gen = UIImpactFeedbackGenerator(style: .medium)
         gen.impactOccurred()
+        store.updateProfileName(childName)
         store.unlockRule = unlockRule
         store.onboardingComplete = true
     }
@@ -304,8 +305,10 @@ struct OnboardingView: View {
     private func Step1() -> some View {
         VStack(spacing: 0) {
             mascotBubble(text: "Hi I'm Yoko")
+                .offset(y: 15)
             MascotGIF(url: mascotGIF(.happy), size: min(261, UIScreen.main.bounds.width * 0.6))
                 .padding(.top, 20)
+                .offset(y: 10)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
@@ -672,7 +675,7 @@ struct OnboardingView: View {
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
                     .padding(.top, 96)
-                    .offset(y: 10)
+                    .offset(y: 16)
                     .opacity(imageLoaded13 ? 1 : 0)
                     .animation(.easeIn(duration: 0.3), value: imageLoaded13)
                 , alignment: .top
@@ -762,10 +765,10 @@ struct OnboardingView: View {
         VStack(spacing: 14) {
             Color.clear.frame(height: 0)
             SequencedStreakGIFView(firstURL: GIFAssets.streak1, loopURL: GIFAssets.streak2)
-                .frame(width: 214, height: 214)
+                .frame(width: 246, height: 246)
                 .frame(maxWidth: .infinity)
 
-            StreakRevealText(text: "1 day streak!", size: 28, color: .white)
+            StreakRevealText(text: "1 day streak!", size: 30, color: .white)
                 .padding(.top, -18)
 
             HStack {
@@ -797,6 +800,7 @@ struct OnboardingView: View {
                 RoundedRectangle(cornerRadius: 28)
                     .stroke(.white.opacity(0.55), lineWidth: 1)
             )
+            .offset(y: 6)
         }
     }
 
@@ -804,7 +808,7 @@ struct OnboardingView: View {
 
     private func Step19() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            MascotGIF(url: mascotGIF(.proud), size: 158)
+            MascotGIF(url: GIFAssets.lockStanding, size: 158)
                 .frame(maxWidth: .infinity)
             Text("Set the Unlock Rule")
                 .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -978,9 +982,11 @@ struct OnboardingView: View {
             Image("NotificationIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(height: 220)
+                .frame(height: 264)
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 8)
+                .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 8)
+                .offset(y: -20)
 
             VStack(spacing: 10) {
                 Text("Allow Yoko to send notifications")
@@ -994,6 +1000,7 @@ struct OnboardingView: View {
                     .lineSpacing(4)
             }
             .padding(.horizontal, 8)
+            .offset(y: -40)
 
             VStack(spacing: 0) {
                 permissionRow(
@@ -1021,6 +1028,7 @@ struct OnboardingView: View {
                 RoundedRectangle(cornerRadius: DS.Radius.large)
                     .stroke(DS.Color.border, lineWidth: 1)
             )
+            .offset(y: -40)
         }
         .padding(.top, 12)
     }
@@ -1157,7 +1165,7 @@ struct DemoQuestionScreen: View {
 
                         MascotGIF(url: mascotURL, size: 162)
                             .padding(.top, -9)
-                            .offset(y: -15)
+                            .offset(y: -30)
                             .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
                         contentArea
@@ -1227,7 +1235,7 @@ struct DemoQuestionScreen: View {
                     .resizable()
                     .scaledToFill()
                     .scaleEffect(1.05)
-                    .offset(y: -64)
+                    .offset(y: -72)
                     .clipped()
                     .onAppear {
                         withAnimation(.easeIn(duration: 0.25)) { bgLoaded = true }
@@ -1283,7 +1291,7 @@ struct DemoQuestionScreen: View {
             )
         )
         .shadow(color: Color.black.opacity(0.04), radius: 16, x: 0, y: -4)
-        .padding(.top, -23)
+        .padding(.top, -31)
     }
 
     private func evaluate() {
@@ -1420,7 +1428,7 @@ struct PlanCreationView: View {
 
     var body: some View {
         VStack(spacing: 22) {
-            MascotGIF(url: planMascotURL, size: 158)
+            MascotGIF(url: planMascotURL, size: 166)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 6) {
@@ -2029,7 +2037,7 @@ struct CommitmentScreen: View {
 
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 18) {
-                            MascotGIF(url: GIFAssets.glasses, size: 122)
+                            MascotGIF(url: GIFAssets.glasses, size: 146)
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 2)
 
@@ -2040,6 +2048,7 @@ struct CommitmentScreen: View {
                                 .lineSpacing(3)
 
                             signatureCard
+                                .padding(.top, 10)
 
                             if hasSignature {
                                 VStack(spacing: 8) {
