@@ -26,21 +26,9 @@ final class GIFCache: @unchecked Sendable {
 }
 
 enum MediaPreloader {
-    static let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
-
     /// All mascot/onboarding GIFs that should be ready before the user reaches
     /// the screens that show them.
-    static var gifURLs: [String] {
-        [
-            "\(base)/HappyGIF.gif",
-            "\(base)/ThinkingGIF.gif",
-            "\(base)/DeterminedGIF.gif",
-            "\(base)/SadGIF.gif",
-            "\(base)/ExcitedGIF.gif",
-            "\(base)/ProudGIF.gif",
-            "\(base)/GlassesGIF.gif"
-        ]
-    }
+    static var gifURLs: [String] { GIFAssets.all }
 
     /// Kicks off background fetches for every GIF URL. Safe to call multiple
     /// times — already-cached URLs are skipped.

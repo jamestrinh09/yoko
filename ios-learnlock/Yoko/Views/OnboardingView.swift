@@ -687,10 +687,7 @@ struct OnboardingView: View {
 
     private func Step14() -> some View {
         VStack(spacing: 24) {
-            MascotGIF(
-                url: "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/GlassesGIF.gif",
-                size: 198
-            )
+            MascotGIF(url: GIFAssets.armor, size: 198)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
@@ -979,7 +976,10 @@ struct OnboardingView: View {
     private func Step23() -> some View {
         let nameDisplay = childName.isEmpty ? "your child" : childName
         return VStack(spacing: 22) {
-            MascotGIF(url: mascotGIF(.proud), size: 149)
+            Image("NotificationsHero")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 198, height: 149)
                 .frame(maxWidth: .infinity)
 
             VStack(spacing: 10) {
@@ -1128,13 +1128,12 @@ struct DemoQuestionScreen: View {
     }
 
     private var mascotURL: String {
-        let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
         switch mascotMood {
-        case .happy: return "\(base)/HappyGIF.gif"
-        case .thinking: return "\(base)/ThinkingGIF.gif"
-        case .determined: return "\(base)/DeterminedGIF.gif"
-        case .excited: return "\(base)/ExcitedGIF.gif"
-        case .sad: return "\(base)/SadGIF.gif"
+        case .happy: return GIFAssets.happy
+        case .thinking: return GIFAssets.thinking
+        case .determined: return GIFAssets.determined
+        case .excited: return GIFAssets.excited
+        case .sad: return GIFAssets.sad
         }
     }
 
@@ -1950,14 +1949,13 @@ struct FadeInText: View {
 // MARK: - GIF Helpers
 
 private func mascotGIF(_ mood: MascotMood) -> String {
-    let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
     switch mood {
-    case .happy: return "\(base)/HappyGIF.gif"
-    case .thinking: return "\(base)/ThinkingGIF.gif"
-    case .determined: return "\(base)/DeterminedGIF.gif"
-    case .sad: return "\(base)/SadGIF.gif"
-    case .excited: return "\(base)/ExcitedGIF.gif"
-    case .proud: return "\(base)/ProudGIF.gif"
+    case .happy: return GIFAssets.happy
+    case .thinking: return GIFAssets.thinking
+    case .determined: return GIFAssets.determined
+    case .sad: return GIFAssets.sad
+    case .excited: return GIFAssets.excited
+    case .proud: return GIFAssets.proud
     }
 }
 

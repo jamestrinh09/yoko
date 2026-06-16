@@ -25,8 +25,7 @@ struct LessonCompleteView: View {
     private let heroURL = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/UnlockScreen.png"
 
     private var mascotURL: String {
-        let base = "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko"
-        return result.isPerfect ? "\(base)/ExcitedGIF.gif" : "\(base)/ProudGIF.gif"
+        result.isPerfect ? GIFAssets.excited : GIFAssets.proud
     }
 
     // MARK: - Derived rewards

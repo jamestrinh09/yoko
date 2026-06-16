@@ -313,20 +313,18 @@ struct LessonPlayerView: View {
 
     private var mascotURL: String {
         if showSummary {
-            return wrongCount > lesson.questions.count / 2
-                ? "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ProudGIF.gif"
-                : "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ExcitedGIF.gif"
+            return wrongCount > lesson.questions.count / 2 ? GIFAssets.proud : GIFAssets.excited
         }
         if lastAnswerWasWrong {
-            return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/SadGIF.gif"
+            return GIFAssets.sad
         }
         if index == lesson.questions.count - 1 {
-            return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/DeterminedGIF.gif"
+            return GIFAssets.determined
         }
         if index == 1 {
-            return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/ThinkingGIF.gif"
+            return GIFAssets.thinking
         }
-        return "https://pyikafpvphzqdadjvktz.supabase.co/storage/v1/object/public/Yoko/HappyGIF.gif"
+        return GIFAssets.happy
     }
 
     // MARK: - Bottom Footer

@@ -89,7 +89,35 @@ final class GIFImageView: UIImageView {
     }
 }
 
+/// Decoded GIF frames plus their total playback duration.
+struct DecodedGIF {
+    let frames: [UIImage]
+    let duration: Double
+}
+
 extension UIImage {
+    /// Decodes raw GIF bytes into individual frames and their total duration.
+    /// Used when frame-level control is needed (e.g. play-once then loop).
+    static func decodeGIFFrames(data: Data) -> DecodedGIF? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            if let image = UIImage(data: data) {
+                return DecodedGIF(frames: [image], duration: 0.1)
+            }
+            return nil
+        }
+        let count = CGImageSourceGetCount(source)
+        var frames: [UIImage] = []
+        var totalDuration: Double = 0
+        for index in 0..<count {
+            guard let cgImage = CGImageSourceCreateImageAtIndex(source, index, nil) else { continue }
+            frames.append(UIImage(cgImage: cgImage))
+            totalDuration += frameDuration(source: source, index: index)
+        }
+        guard !frames.isEmpty else { return nil }
+        if totalDuration <= 0 { totalDuration = Double(frames.count) * 0.1 }
+        return DecodedGIF(frames: frames, duration: totalDuration)
+    }
+
     /// Decodes raw GIF bytes into an animated `UIImage`. Falls back to a static
     /// image for single-frame data.
     static func animatedGIF(data: Data) -> UIImage? {
