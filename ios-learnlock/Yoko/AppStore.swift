@@ -226,6 +226,16 @@ final class AppStore {
         locks[idx] = lock
     }
 
+    /// Applies the unlock rule chosen during onboarding to every app so the
+    /// Locks tab reflects the parent's choice. All apps become Reward Unlock
+    /// with the selected sub-rule ("session", "time", or "daily").
+    func applyOnboardingRuleToAllLocks(_ rewardRule: String) {
+        for i in locks.indices {
+            locks[i].type = .reward
+            locks[i].rewardRule = rewardRule
+        }
+    }
+
     /// Set an app's unlock rule. For reward locks, `rewardRule` is one of
     /// "session", "time", or "daily". The on/off toggle is independent of this.
     func setLockRule(_ lock: AppLock, type: LockType, rewardRule: String) {

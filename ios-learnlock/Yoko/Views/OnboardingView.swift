@@ -26,6 +26,7 @@ struct OnboardingView: View {
     @State private var imageLoaded3 = false
     @State private var imageLoaded11 = false
     @State private var imageLoaded13 = false
+    @State private var appGlow = false
 
     private let totalSteps = 23
 
@@ -278,6 +279,7 @@ struct OnboardingView: View {
         gen.impactOccurred()
         store.updateProfileName(childName)
         store.unlockRule = unlockRule
+        store.applyOnboardingRuleToAllLocks(unlockRule)
         store.onboardingComplete = true
     }
 
@@ -308,10 +310,10 @@ struct OnboardingView: View {
     private func Step1() -> some View {
         VStack(spacing: 0) {
             mascotBubble(text: "Hi I'm Yoko")
-                .offset(y: 15)
+                .offset(y: 30)
             MascotGIF(url: mascotGIF(.happy), size: min(261, UIScreen.main.bounds.width * 0.6))
                 .padding(.top, 20)
-                .offset(y: 10)
+                .offset(y: 20)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
@@ -321,7 +323,7 @@ struct OnboardingView: View {
     // MARK: - Step 2
 
     private func Step2() -> some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .center, spacing: 25) {
             RoundedImageCard(localName: "LookingAtIPAD") {
                 withAnimation(.easeIn(duration: 0.3)) { imageLoaded2 = true }
             }
@@ -333,6 +335,8 @@ struct OnboardingView: View {
                     .foregroundStyle(DS.Color.accent)
             }
             .lineSpacing(6)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .center)
             .opacity(imageLoaded2 ? 1 : 0)
             .animation(.easeIn(duration: 0.3), value: imageLoaded2)
         }
@@ -342,7 +346,7 @@ struct OnboardingView: View {
     // MARK: - Step 3
 
     private func Step3() -> some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 25) {
             RoundedImageCard(localName: "BehindPOV") {
                 withAnimation(.easeIn(duration: 0.3)) { imageLoaded3 = true }
             }
@@ -655,10 +659,16 @@ struct OnboardingView: View {
                     .font(.system(size: 32, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .shadow(color: .black.opacity(0.4), radius: 4, x: 0, y: 2)
+                    .shadow(color: .white.opacity(appGlow ? 0.9 : 0.25), radius: appGlow ? 18 : 4)
                     .padding(.top, 96)
-                    .offset(y: 16)
+                    .offset(y: 21)
                     .opacity(imageLoaded13 ? 1 : 0)
                     .animation(.easeIn(duration: 0.3), value: imageLoaded13)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                            appGlow = true
+                        }
+                    }
                 , alignment: .top
             )
             .onTapGesture {
@@ -737,7 +747,6 @@ struct OnboardingView: View {
             onContinue: nextStep,
             ctaLabel: questionNum < 3 ? "Next question →" : "Unlock app 🔓"
         )
-        .id(step)
     }
 
     // MARK: - Step 17 (Streak)
@@ -789,7 +798,7 @@ struct OnboardingView: View {
 
     private func Step18() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            MascotGIF(url: GIFAssets.lockStanding, size: 158)
+            MascotGIF(url: GIFAssets.lockStanding, size: 190)
                 .frame(maxWidth: .infinity)
             Text("Set the Unlock Rule")
                 .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -990,7 +999,7 @@ struct OnboardingView: View {
                 RoundedRectangle(cornerRadius: DS.Radius.large)
                     .stroke(DS.Color.border, lineWidth: 1)
             )
-            .offset(y: -40)
+            .offset(y: -70)
         }
         .padding(.top, 12)
     }
@@ -1046,9 +1055,9 @@ struct OnboardingView: View {
 
     private func ruleLabel(_ id: String) -> String {
         switch id {
-        case "session": return "3 questions per session"
-        case "time": return "3 questions = 30 minutes"
-        case "daily": return "3 questions = all day"
+        case "session": return "1 lesson per session"
+        case "time": return "1 lesson = 30 minutes"
+        case "daily": return "1 lesson = all day"
         default: return "—"
         }
     }
@@ -1073,6 +1082,7 @@ struct DemoQuestionScreen: View {
     @State private var feedback: LessonPlayerView.Feedback = .none
     @State private var advanceTask: Task<Void, Never>?
     @State private var unscramble = UnscrambleState()
+    @State private var contentOpacity: Double = 1
 
     enum DemoMascotMood { case happy, thinking, determined, excited, sad }
 
@@ -1127,7 +1137,7 @@ struct DemoQuestionScreen: View {
 
                         MascotGIF(url: mascotURL, size: 162)
                             .padding(.top, -9)
-                            .offset(y: -30)
+                            .offset(y: -35)
                             .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
                         contentArea
@@ -1159,6 +1169,9 @@ struct DemoQuestionScreen: View {
                 gifReady = true
             }
         }
+        .onChange(of: questionNum) { _, _ in
+            resetForQuestion()
+        }
         .onChange(of: selected) { _, newValue in
             guard let newValue, feedback == .none else { return }
             // If the user is recovering from a wrong answer, bring the mascot
@@ -1179,6 +1192,20 @@ struct DemoQuestionScreen: View {
             }
         }
         .onDisappear { advanceTask?.cancel() }
+    }
+
+    /// Resets per-question state and fades the card's inner content back in.
+    /// Used when advancing between demo questions without rebuilding the whole
+    /// screen, so the hero never flashes — only the GIF swaps and the content
+    /// inside the card fades in.
+    private func resetForQuestion() {
+        advanceTask?.cancel()
+        selected = nil
+        feedback = .none
+        unscramble = UnscrambleState()
+        mascotMood = initialMood()
+        contentOpacity = 0
+        withAnimation(.easeIn(duration: 0.3)) { contentOpacity = 1 }
     }
 
     private func initialMood() -> DemoMascotMood {
@@ -1229,6 +1256,7 @@ struct DemoQuestionScreen: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 .padding(.bottom, 8)
+                .opacity(contentOpacity)
             }
 
             keyProgressRow
@@ -1762,9 +1790,9 @@ struct UnlockRuleOption: Identifiable {
     let icon: String
 
     static let all: [UnlockRuleOption] = [
-        UnlockRuleOption(id: "session", label: "3 questions = unlock this session", desc: "Answer each time they want access", icon: "🔄"),
-        UnlockRuleOption(id: "time", label: "3 questions = 30 minutes", desc: "Earn screen time by learning", icon: "⏱️"),
-        UnlockRuleOption(id: "daily", label: "3 questions = unlock for the day", desc: "Answer once, unlock for the day", icon: "📅")
+        UnlockRuleOption(id: "session", label: "1 lesson = unlock session", desc: "Learn for access each time", icon: "🔄"),
+        UnlockRuleOption(id: "time", label: "1 lesson = 30 minutes", desc: "Earn screen time by learning", icon: "⏱️"),
+        UnlockRuleOption(id: "daily", label: "1 lesson = unlock for day", desc: "Learn once, unlock for the day", icon: "📅")
     ]
 
     /// Short label used in confirmation toasts, e.g. "30 minutes".
