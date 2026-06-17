@@ -112,14 +112,25 @@ struct QuestionRenderer: View {
         case "which_has_more_or_less":
             tappableComparison
 
+        case "compare_numbers":
+            // Tappable number pair with a progressive reveal: after a choice is
+            // made the larger value grows and the smaller shrinks, reinforcing
+            // "bigger" visually instead of only marking right/wrong.
+            NumberComparisonCard(
+                left: content["left"] ?? choices.first ?? "",
+                right: content["right"] ?? choices.last ?? "",
+                selected: selectedAnswer,
+                locked: isLocked
+            ) { selectedAnswer = $0 }
+
         case "addition_by_counting":
             AdditionGroupsCard(left: split(content["left"]), right: split(content["right"]), equation: content["equation"])
 
         case "subtraction_by_taking_away":
-            VStack(spacing: 12) {
-                EmojiCounterRow(items: split(content["items"]), hint: feedback == .incorrect)
-                equationLabel(content["equation"])
-            }
+            // Pre-reader visual only: filled emoji = remaining, faded = removed.
+            // The written equation is intentionally omitted so the picture carries
+            // the meaning; numeric answer choices render below this visual.
+            EmojiCounterRow(items: split(content["items"]), hint: feedback == .incorrect)
 
         case "missing_number_equation":
             buildBlankCard(pattern: content["equation"] ?? question.prompt, chips: chipValues, directSelect: true)
@@ -151,11 +162,24 @@ struct QuestionRenderer: View {
         case "uppercase_lowercase_matching":
             MatchingCardSet(left: content["uppercase"] ?? "B", right: choices, selected: selectedAnswer, locked: isLocked) { selectedAnswer = $0 }
 
-        case "beginning_sounds", "choose_correct_spelling", "sight_word_recognition", "punctuation_choice", "rhyming_words", "word_families", "vocabulary_matching":
+        case "beginning_sounds":
+            // Phonics by ear: only the emoji shows as a hint and each choice has a
+            // speaker button that reads the word aloud. The written word stays
+            // hidden until the child answers, so it can't be solved by reading.
+            SoundChoiceRow(choices: choices, selected: selectedAnswer, revealWord: isLocked, locked: isLocked) { selectedAnswer = $0 }
+
+        case "choose_correct_spelling", "sight_word_recognition", "punctuation_choice", "rhyming_words", "word_families", "vocabulary_matching":
             visualTapGrid(items: choices, style: englishChoiceStyle)
 
         case "missing_letter", "fill_missing_letters":
-            buildBlankCard(pattern: content["wordWithBlank"] ?? content["wordWithBlanks"] ?? question.prompt, chips: choices, emoji: content["emoji"])
+            // Tapping a choice fills the blank box and highlights the selection.
+            MissingLetterCard(
+                pattern: content["wordWithBlank"] ?? content["wordWithBlanks"] ?? question.prompt,
+                choices: choices,
+                emoji: content["emoji"],
+                selected: selectedAnswer,
+                locked: isLocked
+            ) { selectedAnswer = $0 }
 
         case "unscramble_word":
             UnscrambleCard(
@@ -454,8 +478,8 @@ struct FlowRow: View {
                         )
                 }
                 .buttonStyle(.plain)
-                .scaleEffect(selected == item ? 1.04 : 1.0)
-                .animation(.spring(duration: 0.2), value: selected)
+                .scaleEffect(selected == item ? 1.08 : 1.0)
+                .animation(.spring(response: 0.22, dampingFraction: 0.45), value: selected)
             }
         }
     }
@@ -1011,5 +1035,226 @@ struct GrammarBucketsCard: View {
             FlowRow(items: buckets, selected: selected, locked: locked, action: action)
                 .environment(\.choiceStyle, .word)
         }
+    }
+}
+
+// MARK: - Missing Letter Card
+
+/// Renders a word with one or more blank slots. Tapping an answer choice fills
+/// the blank with the chosen letter(s) and highlights the selected choice, the
+/// same way the number-comparison choices give visual feedback.
+struct MissingLetterCard: View {
+    let pattern: String          // e.g. "c_t", "sh_p", or "b__k"
+    let choices: [String]
+    let emoji: String?
+    let selected: String?
+    let locked: Bool
+    let onSelect: (String) -> Void
+
+    private struct Segment: Identifiable {
+        let id = UUID()
+        let text: String
+        let isBlank: Bool
+    }
+
+    /// Splits the pattern into literal letters and blank runs (consecutive
+    /// underscores collapse into a single blank — "b__k" has one blank).
+    private var segments: [Segment] {
+        var result: [Segment] = []
+        var index = pattern.startIndex
+        while index < pattern.endIndex {
+            if pattern[index] == "_" {
+                while index < pattern.endIndex && pattern[index] == "_" {
+                    index = pattern.index(after: index)
+                }
+                result.append(Segment(text: "", isBlank: true))
+            } else {
+                result.append(Segment(text: String(pattern[index]), isBlank: false))
+                index = pattern.index(after: index)
+            }
+        }
+        return result
+    }
+
+    var body: some View {
+        VStack(spacing: 18) {
+            if let emoji {
+                Text(emoji).font(.system(size: 52))
+            }
+
+            HStack(spacing: 6) {
+                ForEach(segments) { segment in
+                    if segment.isBlank {
+                        blankBox
+                    } else {
+                        Text(segment.text)
+                            .font(.system(size: 40, weight: .heavy, design: .rounded))
+                            .foregroundStyle(DS.Color.textPrimary)
+                    }
+                }
+            }
+
+            FlowRow(items: choices, selected: selected, locked: locked, action: onSelect)
+                .environment(\.choiceStyle, .letter)
+        }
+    }
+
+    private var blankBox: some View {
+        Text(selected ?? "")
+            .font(.system(size: 40, weight: .heavy, design: .rounded))
+            .foregroundStyle(DS.Color.accent)
+            .frame(minWidth: 50, minHeight: 60)
+            .background(DS.Color.accentSoft.opacity(selected == nil ? 0.35 : 0.7))
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(
+                        DS.Color.accent,
+                        style: StrokeStyle(lineWidth: 2.5, dash: selected == nil ? [6, 5] : [])
+                    )
+            )
+            .scaleEffect(selected == nil ? 1.0 : 1.06)
+            .animation(.spring(response: 0.25, dampingFraction: 0.55), value: selected)
+    }
+}
+
+// MARK: - Sound Choice Row (Beginning Sounds — phonics by ear)
+
+struct SoundChoiceRow: View {
+    let choices: [String]        // each like "\u{1F43B} bear"
+    let selected: String?
+    let revealWord: Bool
+    let locked: Bool
+    let action: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ForEach(choices, id: \.self) { choice in
+                SoundChoiceCard(
+                    raw: choice,
+                    isSelected: selected == choice,
+                    revealWord: revealWord,
+                    locked: locked
+                ) { action(choice) }
+            }
+        }
+    }
+}
+
+struct SoundChoiceCard: View {
+    let raw: String
+    let isSelected: Bool
+    let revealWord: Bool
+    let locked: Bool
+    let action: () -> Void
+
+    @State private var bounce = false
+
+    private var emoji: String { raw.split(separator: " ").first.map(String.init) ?? raw }
+    private var word: String { raw.split(separator: " ").dropFirst().joined(separator: " ") }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text(emoji).font(.system(size: 50))
+
+            Button {
+                SpeechPlayer.shared.speak(word.isEmpty ? raw : word)
+            } label: {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(DS.Color.accent)
+                    .clipShape(.circle)
+                    .shadow(color: DS.Color.accent.opacity(0.4), radius: 6, y: 2)
+            }
+            .buttonStyle(.plain)
+            .disabled(locked)
+
+            Text(revealWord ? word : "tap to hear")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(revealWord ? DS.Color.textPrimary : DS.Color.textSecondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+        .clipShape(.rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(isSelected ? DS.Color.accent : Color.clear, lineWidth: 2.5)
+        )
+        .shadow(
+            color: isSelected ? DS.Color.accent.opacity(0.45) : DS.Color.accent.opacity(0.18),
+            radius: isSelected ? 14 : 9,
+            y: 3
+        )
+        .scaleEffect(bounce ? 1.08 : (isSelected ? 1.03 : 1.0))
+        .contentShape(.rect)
+        .onTapGesture {
+            guard !locked else { return }
+            withAnimation(.spring(response: 0.16, dampingFraction: 0.45)) { bounce = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+                withAnimation(.spring(response: 0.26, dampingFraction: 0.6)) { bounce = false }
+            }
+            action()
+        }
+    }
+}
+
+// MARK: - Number Comparison Card (progressive reveal)
+
+struct NumberComparisonCard: View {
+    let left: String
+    let right: String
+    let selected: String?
+    let locked: Bool
+    let action: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 14) {
+            numberCard(left)
+            Text("or")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(DS.Color.accent)
+            numberCard(right)
+        }
+    }
+
+    /// After any selection, the larger value grows and the smaller shrinks so
+    /// the child sees "bigger" reinforced, not just a right/wrong mark.
+    private func revealScale(for value: String) -> CGFloat {
+        guard selected != nil,
+              let l = Int(left), let r = Int(right),
+              let mine = Int(value) else { return 1.0 }
+        return mine == max(l, r) ? 1.18 : 0.82
+    }
+
+    private func numberCard(_ value: String) -> some View {
+        let isSelected = selected == value
+        return Button {
+            guard !locked else { return }
+            action(value)
+        } label: {
+            Text(value)
+                .font(.system(size: 40, weight: .heavy, design: .rounded))
+                .foregroundStyle(DS.Color.textPrimary)
+                .frame(maxWidth: .infinity, minHeight: 96)
+                .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+                .clipShape(.rect(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(isSelected ? DS.Color.accent : Color.clear, lineWidth: 2.5)
+                )
+                .shadow(
+                    color: isSelected ? DS.Color.accent.opacity(0.45) : DS.Color.accent.opacity(0.2),
+                    radius: isSelected ? 14 : 9,
+                    y: 3
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(locked)
+        .scaleEffect(revealScale(for: value) * (isSelected ? 1.03 : 1.0))
+        .animation(.spring(response: 0.4, dampingFraction: 0.6), value: selected)
     }
 }
