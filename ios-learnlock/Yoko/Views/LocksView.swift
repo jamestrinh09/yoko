@@ -10,10 +10,40 @@ struct LocksView: View {
     @Environment(AppStore.self) private var store
     @Environment(ScreenTimeService.self) private var screenTime
     @State private var filter: LockType? = nil
-    @State private var ruleEditLock: AppLock? = nil
     @State private var showAppPicker: Bool = false
     @State private var toast: String? = nil
     @State private var toastSeq: Int = 0
+
+    // Rule editing sheet (single app, multi-select, and post-picker bulk all share it).
+    @State private var ruleSheet: RuleSheetContext? = nil
+
+    // Multi-select bulk-apply state.
+    @State private var selectionMode: Bool = false
+    @State private var selectedAppIds: Set<UUID> = []
+
+    // Post-picker bulk-apply detection.
+    @State private var pickerBaselineCount: Int = 0
+
+    // MARK: - Parent passcode gate
+    //
+    // Every lock-changing action routes through `requireParentPasscode`. Once a
+    // correct passcode is entered, the whole Locks tab unlocks for the current
+    // visit (`locksUnlocked`). Because RootTabView swaps tabs via a `switch`,
+    // LocksView is destroyed when you leave the tab, so `locksUnlocked` resets to
+    // false automatically on the next visit (and after backgrounding).
+    //
+    // The EIGHT gated entry points (keep this list in sync — see GateChecklist):
+    //   1. Tap a single app's rule tag           → LockRow onEditRule
+    //   2. Confirm a rule ("Set Rule")           → RuleSheetContext.apply
+    //   3. Post-picker bulk-apply prompt         → presentBulkPickerRule
+    //   4. Multi-select "Apply Rule"             → applyRuleToSelected
+    //   5. Toggle an app's on/off master switch  → LockRow onToggleEnabled
+    //   6. Toggle Bedtime / School Hours         → scheduleRow onToggle
+    //   7. Remove all locked apps                → clearShields button
+    //   8. Open the app/category picker          → openAppPicker
+    @State private var locksUnlocked: Bool = false
+    @State private var showPasscodeEntry: Bool = false
+    @State private var pendingGatedAction: (() -> Void)? = nil
 
     /// The rule types a parent can choose between (Educational is collapsed into
     /// Reward Unlock, so it never appears as a separate option).
@@ -39,31 +69,124 @@ struct LocksView: View {
                 .padding(.top, 12)
             }
             .dsScreenBackground()
-            .onAppear { screenTime.refreshStatus() }
+            .onAppear {
+                screenTime.refreshStatus()
+                // Re-lock on each visit to the Locks tab.
+                locksUnlocked = false
+            }
             .familyActivityPicker(isPresented: $showAppPicker, selection: screenTimeSelectionBinding)
             .onChange(of: screenTime.selection) { _, _ in
                 screenTime.applyShields()
             }
-            .sheet(item: $ruleEditLock) { lock in
-                SetUnlockRuleSheet(lock: lock) { type, rewardRule in
-                    applyRule(to: lock, type: type, rewardRule: rewardRule)
+            .onChange(of: showAppPicker) { wasShown, isShown in
+                // Picker just closed: if new apps were added, offer to bulk-apply a rule.
+                if wasShown && !isShown && screenTime.selectedItemCount > pickerBaselineCount {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                        presentBulkPickerRule()
+                    }
                 }
             }
-            .overlay(alignment: .bottom) {
-                if let toast {
-                    LockToast(message: toast)
-                        .padding(.bottom, 90)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+            .sheet(item: $ruleSheet) { ctx in
+                SetUnlockRuleSheet(context: ctx)
             }
+            .sheet(isPresented: $showPasscodeEntry, onDismiss: runPendingGatedAction) {
+                ParentPasscodeSheet(
+                    mode: .verify,
+                    existing: store.parentPasscode,
+                    onSuccess: { _ in locksUnlocked = true },
+                    onCancel: { pendingGatedAction = nil }
+                )
+            }
+            .overlay(alignment: .bottom) { bottomBars }
         }
+    }
+
+    // MARK: - Passcode gate
+
+    /// Runs `action` immediately when the gate is open (passcode disabled, unset,
+    /// or already unlocked this visit); otherwise presents the passcode prompt and
+    /// only runs `action` after a correct entry.
+    private func requireParentPasscode(_ action: @escaping () -> Void) {
+        guard store.passcodeGateActive, !locksUnlocked else {
+            action()
+            return
+        }
+        pendingGatedAction = action
+        showPasscodeEntry = true
+    }
+
+    /// Called after the passcode sheet dismisses. Runs the pending action only if
+    /// the parent unlocked successfully; otherwise the action is silently dropped.
+    private func runPendingGatedAction() {
+        let action = pendingGatedAction
+        pendingGatedAction = nil
+        if locksUnlocked { action?() }
     }
 
     // MARK: - Rule editing
 
-    private func applyRule(to lock: AppLock, type: LockType, rewardRule: String) {
-        store.setLockRule(lock, type: type, rewardRule: rewardRule)
-        presentToast(ruleToastMessage(name: lock.name, type: type, rewardRule: rewardRule))
+    private func presentSingleRule(for lock: AppLock) {
+        requireParentPasscode {
+            ruleSheet = RuleSheetContext(
+                headerTitle: "Set Unlock Rule",
+                headerSubtitle: "for \(lock.name)",
+                initialType: lock.type.normalized,
+                initialRule: lock.rewardRule,
+                showSkip: false,
+                apply: { type, rule in
+                    store.setLockRule(lock, type: type, rewardRule: rule)
+                    presentToast(ruleToastMessage(name: lock.name, type: type, rewardRule: rule))
+                }
+            )
+        }
+    }
+
+    private func applyRuleToSelected() {
+        let ids = selectedAppIds
+        guard !ids.isEmpty else { return }
+        requireParentPasscode {
+            ruleSheet = RuleSheetContext(
+                headerTitle: "Apply Rule",
+                headerSubtitle: "to \(ids.count) selected app\(ids.count == 1 ? "" : "s")",
+                initialType: .reward,
+                initialRule: "session",
+                showSkip: false,
+                apply: { type, rule in
+                    store.setLockRule(forIds: ids, type: type, rewardRule: rule)
+                    presentToast(bulkToastMessage(count: ids.count, type: type, rewardRule: rule))
+                    withAnimation(.spring(duration: 0.3)) {
+                        selectionMode = false
+                        selectedAppIds.removeAll()
+                    }
+                }
+            )
+        }
+    }
+
+    /// Part 1 — after the Screen Time picker adds new apps, offer to apply one rule
+    /// to all of them. Skipping leaves everything as-is.
+    private func presentBulkPickerRule() {
+        let count = screenTime.selectedItemCount
+        requireParentPasscode {
+            ruleSheet = RuleSheetContext(
+                headerTitle: "Apply a Rule",
+                headerSubtitle: "to all \(count) selected app\(count == 1 ? "" : "s")",
+                initialType: .reward,
+                initialRule: "session",
+                showSkip: true,
+                apply: { type, rule in
+                    store.setLockRuleForAll(type: type, rewardRule: rule)
+                    presentToast(bulkToastMessage(count: store.locks.count, type: type, rewardRule: rule))
+                }
+            )
+        }
+    }
+
+    private func openAppPicker() {
+        requireParentPasscode {
+            pickerBaselineCount = screenTime.selectedItemCount
+            showAppPicker = true
+        }
     }
 
     private func ruleToastMessage(name: String, type: LockType, rewardRule: String) -> String {
@@ -71,6 +194,15 @@ struct LocksView: View {
         case .timed: return "\(name) set to Timed Lock"
         case .full: return "\(name) set to Full Lock"
         default: return "\(name) set to Reward Unlock · \(UnlockRuleOption.shortLabel(rewardRule))"
+        }
+    }
+
+    private func bulkToastMessage(count: Int, type: LockType, rewardRule: String) -> String {
+        let suffix = count == 1 ? "app" : "apps"
+        switch type.normalized {
+        case .timed: return "\(count) \(suffix) set to Timed Lock"
+        case .full: return "\(count) \(suffix) set to Full Lock"
+        default: return "\(count) \(suffix) set to Reward Unlock · \(UnlockRuleOption.shortLabel(rewardRule))"
         }
     }
 
@@ -84,6 +216,47 @@ struct LocksView: View {
                 withAnimation(.easeOut(duration: 0.3)) { toast = nil }
             }
         }
+    }
+
+    // MARK: - Bottom overlays (toast + multi-select action bar)
+
+    @ViewBuilder
+    private var bottomBars: some View {
+        VStack(spacing: 10) {
+            if let toast {
+                LockToast(message: toast)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            if selectionMode && !selectedAppIds.isEmpty {
+                bulkActionBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .padding(.bottom, 96)
+    }
+
+    private var bulkActionBar: some View {
+        Button(action: applyRuleToSelected) {
+            HStack(spacing: 10) {
+                Text("\(selectedAppIds.count) selected")
+                    .font(.dsHeadline)
+                    .foregroundStyle(.white)
+                Spacer()
+                Text("Apply Rule")
+                    .font(.dsHeadline)
+                    .foregroundStyle(.white)
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(DS.Color.accent)
+            .clipShape(.rect(cornerRadius: DS.Radius.large))
+            .shadow(color: DS.Color.accent.opacity(0.4), radius: 16, y: 8)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 24)
     }
 
     private var header: some View {
@@ -132,7 +305,7 @@ struct LocksView: View {
 
             if screenTime.isAuthorized {
                 Button {
-                    showAppPicker = true
+                    openAppPicker()
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "square.grid.2x2.fill")
@@ -156,7 +329,9 @@ struct LocksView: View {
 
                 if screenTime.selectedItemCount > 0 {
                     Button(role: .destructive) {
-                        withAnimation(.spring(duration: 0.3)) { screenTime.clearShields() }
+                        requireParentPasscode {
+                            withAnimation(.spring(duration: 0.3)) { screenTime.clearShields() }
+                        }
                     } label: {
                         Text("Remove all locked apps")
                             .font(.dsCaption)
@@ -191,18 +366,21 @@ struct LocksView: View {
 
     @ViewBuilder
     private var schedulesCard: some View {
-        @Bindable var store = store
         VStack(spacing: 0) {
-            scheduleRow(symbol: "moon.stars.fill", title: "Bedtime Lock", subtitle: "9:00 PM – 7:00 AM", isOn: $store.bedtimeLockEnabled)
+            scheduleRow(symbol: "moon.stars.fill", title: "Bedtime Lock", subtitle: "9:00 PM – 7:00 AM", isOn: store.bedtimeLockEnabled) {
+                requireParentPasscode { store.bedtimeLockEnabled.toggle() }
+            }
             Divider().padding(.leading, 56)
-            scheduleRow(symbol: "backpack.fill", title: "School Hours", subtitle: "8:00 AM – 3:00 PM, Mon–Fri", isOn: $store.schoolHoursLockEnabled)
+            scheduleRow(symbol: "backpack.fill", title: "School Hours", subtitle: "8:00 AM – 3:00 PM, Mon–Fri", isOn: store.schoolHoursLockEnabled) {
+                requireParentPasscode { store.schoolHoursLockEnabled.toggle() }
+            }
         }
         .background(DS.Color.surface)
         .clipShape(.rect(cornerRadius: DS.Radius.large))
         .overlay(RoundedRectangle(cornerRadius: DS.Radius.large).stroke(DS.Color.border, lineWidth: 1))
     }
 
-    private func scheduleRow(symbol: String, title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
+    private func scheduleRow(symbol: String, title: String, subtitle: String, isOn: Bool, onToggle: @escaping () -> Void) -> some View {
         HStack(spacing: 14) {
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .semibold))
@@ -215,7 +393,7 @@ struct LocksView: View {
                 Text(subtitle).font(.dsCaption).foregroundStyle(DS.Color.textSecondary)
             }
             Spacer()
-            Toggle("", isOn: isOn)
+            Toggle("", isOn: Binding(get: { isOn }, set: { _ in onToggle() }))
                 .labelsHidden()
                 .tint(DS.Color.accent)
         }
@@ -239,23 +417,69 @@ struct LocksView: View {
 
     private var lockList: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionHeader(title: "Apps")
-            ForEach(filtered) { lock in
-                LockRow(lock: lock) {
-                    ruleEditLock = lock
+            HStack {
+                SectionHeader(title: "Apps")
+                Spacer()
+                Button(selectionMode ? "Done" : "Select") {
+                    withAnimation(.spring(duration: 0.3)) {
+                        selectionMode.toggle()
+                        if !selectionMode { selectedAppIds.removeAll() }
+                    }
                 }
+                .font(.dsHeadline)
+                .foregroundStyle(DS.Color.accent)
+            }
+            ForEach(filtered) { lock in
+                LockRow(
+                    lock: lock,
+                    selectionMode: selectionMode,
+                    isSelected: selectedAppIds.contains(lock.id),
+                    onEditRule: { presentSingleRule(for: lock) },
+                    onToggleEnabled: { requireParentPasscode { store.toggleLock(lock) } },
+                    onToggleSelect: { toggleSelect(lock) }
+                )
+            }
+        }
+    }
+
+    private func toggleSelect(_ lock: AppLock) {
+        withAnimation(.spring(duration: 0.25)) {
+            if selectedAppIds.contains(lock.id) {
+                selectedAppIds.remove(lock.id)
+            } else {
+                selectedAppIds.insert(lock.id)
             }
         }
     }
 }
 
 struct LockRow: View {
-    @Environment(AppStore.self) private var store
     let lock: AppLock
+    let selectionMode: Bool
+    let isSelected: Bool
     /// Opens the "Set Unlock Rule" sheet for this app.
     let onEditRule: () -> Void
+    /// Flips the app's on/off master switch.
+    let onToggleEnabled: () -> Void
+    /// Toggles this app's checkbox while in multi-select mode.
+    let onToggleSelect: () -> Void
 
     var body: some View {
+        rowContent
+            .padding(14)
+            .background(DS.Color.surface)
+            .clipShape(.rect(cornerRadius: DS.Radius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.medium)
+                    .stroke(isSelected ? DS.Color.accent : DS.Color.border, lineWidth: isSelected ? 2 : 1)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if selectionMode { onToggleSelect() }
+            }
+    }
+
+    private var rowContent: some View {
         HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
@@ -270,23 +494,26 @@ struct LockRow: View {
                 ruleTag
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 6) {
-                Toggle("", isOn: Binding(
-                    get: { lock.enabled },
-                    set: { _ in store.toggleLock(lock) }
-                ))
-                .labelsHidden()
-                .tint(DS.Color.accent)
-                statusText
+            if selectionMode {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(isSelected ? DS.Color.accent : DS.Color.textTertiary)
+            } else {
+                VStack(alignment: .trailing, spacing: 6) {
+                    Toggle("", isOn: Binding(
+                        get: { lock.enabled },
+                        set: { _ in onToggleEnabled() }
+                    ))
+                    .labelsHidden()
+                    .tint(DS.Color.accent)
+                    statusText
+                }
             }
         }
-        .padding(14)
-        .background(DS.Color.surface)
-        .clipShape(.rect(cornerRadius: DS.Radius.medium))
-        .overlay(RoundedRectangle(cornerRadius: DS.Radius.medium).stroke(DS.Color.border, lineWidth: 1))
     }
 
     /// Tappable rule pill — the affordance to change this app's unlock rule.
+    /// Disabled during multi-select so the row tap toggles the checkbox instead.
     private var ruleTag: some View {
         Button(action: onEditRule) {
             HStack(spacing: 6) {
@@ -296,9 +523,11 @@ struct LockRow: View {
                 Text(lock.type.normalized.title)
                     .font(.dsCaption)
                     .foregroundStyle(DS.Color.textPrimary)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(DS.Color.textTertiary)
+                if !selectionMode {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(DS.Color.textTertiary)
+                }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -306,6 +535,7 @@ struct LockRow: View {
             .clipShape(.capsule)
         }
         .buttonStyle(.plain)
+        .disabled(selectionMode)
     }
 
     /// Full Lock has no unlock path, so a countdown would be misleading.
@@ -325,24 +555,35 @@ struct LockRow: View {
 
 // MARK: - Set Unlock Rule Sheet
 
-/// Bottom sheet for changing a single app's unlock rule. Page one lets the parent
-/// pick the rule type (Reward / Timed / Full); choosing Reward pushes forward to
-/// the same three rule cards used in onboarding, with a back arrow to return.
+/// Context describing one invocation of the rule-picker sheet. Reused for the
+/// single-app, multi-select, and post-picker bulk flows.
+struct RuleSheetContext: Identifiable {
+    let id = UUID()
+    let headerTitle: String
+    let headerSubtitle: String
+    let initialType: LockType
+    let initialRule: String
+    /// When true, shows a "Skip — I'll set these individually" option.
+    let showSkip: Bool
+    /// Applies the chosen rule. Called on confirm; never on skip/cancel.
+    let apply: (LockType, String) -> Void
+}
+
+/// Bottom sheet for choosing an unlock rule. Page one picks the rule type
+/// (Reward / Timed / Full); choosing Reward pushes forward to the same three
+/// rule cards used in onboarding, with a back arrow to return.
 struct SetUnlockRuleSheet: View {
     @Environment(\.dismiss) private var dismiss
-    let lock: AppLock
-    /// Called with the chosen type and, for reward locks, the unlock rule mode.
-    let onConfirm: (LockType, String) -> Void
+    let context: RuleSheetContext
 
     @State private var selectedType: LockType
     @State private var rewardRule: String
     @State private var showRewardDetail: Bool = false
 
-    init(lock: AppLock, onConfirm: @escaping (LockType, String) -> Void) {
-        self.lock = lock
-        self.onConfirm = onConfirm
-        _selectedType = State(initialValue: lock.type.normalized)
-        _rewardRule = State(initialValue: lock.rewardRule)
+    init(context: RuleSheetContext) {
+        self.context = context
+        _selectedType = State(initialValue: context.initialType.normalized)
+        _rewardRule = State(initialValue: context.initialRule)
     }
 
     var body: some View {
@@ -364,10 +605,10 @@ struct SetUnlockRuleSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Set Unlock Rule")
+                    Text(context.headerTitle)
                         .font(.system(size: 26, weight: .bold, design: .rounded))
                         .foregroundStyle(DS.Color.textPrimary)
-                    Text("for \(lock.name)")
+                    Text(context.headerSubtitle)
                         .font(.dsCallout)
                         .foregroundStyle(DS.Color.textSecondary)
                 }
@@ -389,6 +630,13 @@ struct SetUnlockRuleSheet: View {
                     Text(selectedType == .reward ? "Next" : "Set Rule")
                 }
                 .buttonStyle(DSPrimaryButtonStyle())
+
+                if context.showSkip {
+                    Button("Skip — I'll set these individually") { dismiss() }
+                        .font(.dsCallout)
+                        .foregroundStyle(DS.Color.textSecondary)
+                        .frame(maxWidth: .infinity)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 30)
@@ -439,7 +687,7 @@ struct SetUnlockRuleSheet: View {
     }
 
     private func confirm() {
-        onConfirm(selectedType, rewardRule)
+        context.apply(selectedType, rewardRule)
         dismiss()
     }
 }

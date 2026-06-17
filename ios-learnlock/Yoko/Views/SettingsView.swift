@@ -19,6 +19,7 @@ struct SettingsView: View {
     @State private var showFamilySharing: Bool = false
     @State private var showContactSupport: Bool = false
     @State private var showParentAccount: Bool = false
+    @State private var showSetPasscode: Bool = false
 
     var body: some View {
         ScrollView {
@@ -93,6 +94,16 @@ struct SettingsView: View {
         .sheet(isPresented: $showParentAccount) {
             ParentAccountSheet()
                 .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showSetPasscode) {
+            ParentPasscodeSheet(
+                mode: .set,
+                onSuccess: { code in
+                    store.parentPasscode = code
+                    store.parentPasscodeEnabled = true
+                },
+                onCancel: {}
+            )
         }
         .onAppear { screenTime.refreshStatus() }
     }
@@ -255,12 +266,28 @@ struct SettingsView: View {
                 Divider().padding(.leading, 56)
                 toggleRow(symbol: "moon.stars.fill", title: "Bedtime Lock", isOn: $store.bedtimeLockEnabled)
                 Divider().padding(.leading, 56)
-                toggleRow(symbol: "lock.shield.fill", title: "Parent Passcode", isOn: $store.parentPasscodeEnabled)
+                toggleRow(symbol: "lock.shield.fill", title: "Parent Passcode", isOn: parentPasscodeBinding)
             }
             .background(DS.Color.surface)
             .clipShape(.rect(cornerRadius: DS.Radius.large))
             .overlay(RoundedRectangle(cornerRadius: DS.Radius.large).stroke(DS.Color.border, lineWidth: 1))
         }
+    }
+
+    /// Reflects whether the passcode gate is actually active. Turning it on prompts
+    /// the parent to create a passcode; turning it off clears the stored passcode.
+    private var parentPasscodeBinding: Binding<Bool> {
+        Binding(
+            get: { store.passcodeGateActive },
+            set: { newVal in
+                if newVal {
+                    showSetPasscode = true
+                } else {
+                    store.parentPasscodeEnabled = false
+                    store.parentPasscode = nil
+                }
+            }
+        )
     }
 
     private func toggleRow(symbol: String, title: String, isOn: Binding<Bool>) -> some View {

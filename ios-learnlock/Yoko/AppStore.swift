@@ -17,9 +17,37 @@ final class AppStore {
     var notificationsEnabled: Bool = true
     var bedtimeLockEnabled: Bool = true
     var schoolHoursLockEnabled: Bool = false
-    var parentPasscodeEnabled: Bool = true
     var iCloudSyncEnabled: Bool = true
-    var onboardingComplete: Bool = false
+
+    /// Whether lock-changing actions require the parent passcode. Persisted so the
+    /// choice survives relaunches.
+    var parentPasscodeEnabled: Bool = UserDefaults.standard.object(forKey: "yoko.parentPasscodeEnabled") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(parentPasscodeEnabled, forKey: "yoko.parentPasscodeEnabled") }
+    }
+
+    /// The parent-set passcode (4 digits). Stored in the Keychain, never in plain
+    /// UserDefaults. `nil` means no passcode has been set, so the gate stays open.
+    var parentPasscode: String? {
+        didSet {
+            if let pc = parentPasscode, !pc.isEmpty {
+                Keychain.set(pc, for: "yoko.parentPasscode")
+            } else {
+                Keychain.delete("yoko.parentPasscode")
+            }
+        }
+    }
+
+    /// True once the parent finishes onboarding. Persisted so completed users go
+    /// straight to the app on every relaunch instead of seeing onboarding again.
+    var onboardingComplete: Bool = UserDefaults.standard.bool(forKey: "yoko.onboardingComplete") {
+        didSet { UserDefaults.standard.set(onboardingComplete, forKey: "yoko.onboardingComplete") }
+    }
+
+    /// True when the parent passcode gate is actually active (enabled AND a
+    /// passcode has been set). When false, every lock action runs without a prompt.
+    var passcodeGateActive: Bool {
+        parentPasscodeEnabled && (parentPasscode?.isEmpty == false)
+    }
 
     /// How learning unlocks access. One of "session", "time", or "daily".
     /// Set during onboarding and applied to the app afterwards.
@@ -58,6 +86,7 @@ final class AppStore {
         self.activeChildId = firstChild.id
         self.profile.currentGrade = CurriculumGenerator.gradeBand(for: 1)
         self.profile.startDate = Date()
+        self.parentPasscode = Keychain.get("yoko.parentPasscode")
     }
 
     // MARK: - Children
@@ -242,6 +271,22 @@ final class AppStore {
         guard let idx = locks.firstIndex(where: { $0.id == lock.id }) else { return }
         locks[idx].type = type
         locks[idx].rewardRule = rewardRule
+    }
+
+    /// Apply one rule to a batch of apps at once (multi-select bulk-apply).
+    func setLockRule(forIds ids: Set<UUID>, type: LockType, rewardRule: String) {
+        for i in locks.indices where ids.contains(locks[i].id) {
+            locks[i].type = type
+            locks[i].rewardRule = rewardRule
+        }
+    }
+
+    /// Apply one rule to every app (used by the post-picker "apply to all" prompt).
+    func setLockRuleForAll(type: LockType, rewardRule: String) {
+        for i in locks.indices {
+            locks[i].type = type
+            locks[i].rewardRule = rewardRule
+        }
     }
 
     func unlockApp(_ lock: AppLock, minutes: Int) {
