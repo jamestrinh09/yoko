@@ -226,6 +226,14 @@ final class AppStore {
         locks[idx] = lock
     }
 
+    /// Set an app's unlock rule. For reward locks, `rewardRule` is one of
+    /// "session", "time", or "daily". The on/off toggle is independent of this.
+    func setLockRule(_ lock: AppLock, type: LockType, rewardRule: String) {
+        guard let idx = locks.firstIndex(where: { $0.id == lock.id }) else { return }
+        locks[idx].type = type
+        locks[idx].rewardRule = rewardRule
+    }
+
     func unlockApp(_ lock: AppLock, minutes: Int) {
         guard let idx = locks.firstIndex(where: { $0.id == lock.id }) else { return }
         let used = min(minutes, locks[idx].earnedMinutesAvailable, profile.earnedScreenTimeMinutes)

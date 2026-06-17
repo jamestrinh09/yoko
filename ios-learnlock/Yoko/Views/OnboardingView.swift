@@ -795,26 +795,7 @@ struct OnboardingView: View {
                 .font(.system(size: 32, weight: .bold, design: .rounded))
                 .foregroundStyle(DS.Color.textPrimary)
 
-            let rules: [(id: String, label: String, desc: String, icon: String)] = [
-                ("session", "3 questions = unlock this session", "Answer each time they want access", "🔄"),
-                ("time", "3 questions = 30 minutes", "Earn screen time by learning", "⏱️"),
-                ("daily", "3 questions = unlock for the day", "Answer once, unlock for the day", "📅")
-            ]
-
-            VStack(spacing: 10) {
-                ForEach(rules, id: \.id) { r in
-                    SelectableRow(
-                        icon: r.icon,
-                        title: r.label,
-                        subtitle: r.desc,
-                        titleFont: .system(size: 19, weight: .semibold, design: .rounded),
-                        subtitleFont: .system(size: 14, weight: .regular, design: .rounded),
-                        selected: unlockRule == r.id
-                    ) {
-                        unlockRule = r.id
-                    }
-                }
-            }
+            UnlockRuleCards(selection: $unlockRule)
         }
     }
 
@@ -1770,6 +1751,52 @@ struct SelectableRow: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// A single reward-unlock rule option (shared by onboarding and the Locks tab).
+struct UnlockRuleOption: Identifiable {
+    let id: String          // "session" | "time" | "daily"
+    let label: String
+    let desc: String
+    let icon: String
+
+    static let all: [UnlockRuleOption] = [
+        UnlockRuleOption(id: "session", label: "3 questions = unlock this session", desc: "Answer each time they want access", icon: "🔄"),
+        UnlockRuleOption(id: "time", label: "3 questions = 30 minutes", desc: "Earn screen time by learning", icon: "⏱️"),
+        UnlockRuleOption(id: "daily", label: "3 questions = unlock for the day", desc: "Answer once, unlock for the day", icon: "📅")
+    ]
+
+    /// Short label used in confirmation toasts, e.g. "30 minutes".
+    static func shortLabel(_ id: String) -> String {
+        switch id {
+        case "time": return "30 minutes"
+        case "daily": return "all day"
+        default: return "per session"
+        }
+    }
+}
+
+/// The three reward-unlock rule cards from onboarding, reused wherever a parent
+/// configures how learning grants access (onboarding + the Locks tab sheet).
+struct UnlockRuleCards: View {
+    @Binding var selection: String
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ForEach(UnlockRuleOption.all) { r in
+                SelectableRow(
+                    icon: r.icon,
+                    title: r.label,
+                    subtitle: r.desc,
+                    titleFont: .system(size: 19, weight: .semibold, design: .rounded),
+                    subtitleFont: .system(size: 14, weight: .regular, design: .rounded),
+                    selected: selection == r.id
+                ) {
+                    selection = r.id
+                }
+            }
+        }
     }
 }
 

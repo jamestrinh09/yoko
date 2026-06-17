@@ -334,16 +334,19 @@ struct QuestionRenderer: View {
     // MARK: - Helpers
 
     private var showsSeparateChoiceArea: Bool {
-        let buildTemplates: Set<String> = [
-            "missing_number_equation", "missing_letter", "fill_missing_letters",
-            "unscramble_word", "sentence_building", "sequencing",
-            "letter_recognition", "uppercase_lowercase_matching",
-            "which_has_more_or_less", "number_line_jump", "grammar_sorting",
-            "beginning_sounds", "choose_correct_spelling",
-            "sight_word_recognition", "punctuation_choice",
-            "rhyming_words", "word_families", "vocabulary_matching"
+        // Only these templates render a non-choice visual (emoji counts, arrays,
+        // clocks, fraction bars, etc.) and therefore need a separate row of answer
+        // choices below. Every other template either renders its own choices inline
+        // (self-contained templates like letter recognition or comparisons) or is a
+        // generic multiple-choice question handled by the `default` interactive
+        // case — for those, rendering the choices here too would duplicate them and
+        // produce the 2x2 grid of repeated options.
+        let visualWithSeparateChoices: Set<String> = [
+            "counting_objects", "addition_by_counting", "subtraction_by_taking_away",
+            "make_ten", "multiplication_arrays", "division_as_sharing",
+            "pattern_recognition", "fractions", "telling_time", "reading_comprehension"
         ]
-        return !buildTemplates.contains(template) && choices.count > 1
+        return visualWithSeparateChoices.contains(template) && choices.count > 1
     }
 
     private var englishChoiceStyle: ChoiceStyle { template == "letter_recognition" ? .letter : .word }
@@ -411,8 +414,8 @@ struct FlowRow: View {
     @Environment(\.choiceStyle) private var style
 
     var body: some View {
-        // With exactly two choices an adaptive grid can fit two columns and ends
-        // up rendering each item twice. Use a fixed 2-column grid in that case.
+        // With exactly two choices, use a fixed 2-column grid so they sit
+        // side-by-side in a single clean row rather than an uneven adaptive layout.
         let columns: [GridItem] = items.count == 2
             ? [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
             : [GridItem(.adaptive(minimum: minWidth), spacing: 12)]
@@ -596,24 +599,38 @@ struct ArrayBuilderCard: View {
     let rows: Int
     let columns: Int
     let item: String
-    private let maxVisibleRows = 4
+
+    private var rowCount: Int { max(rows, 1) }
+    private var columnCount: Int { max(columns, 1) }
+
+    /// The full array must always be visible — the child is counting it. Instead
+    /// of capping rows, the dot size and spacing shrink as the grid grows so even
+    /// large arrays fit on screen without truncation.
+    private var itemSize: CGFloat {
+        switch max(rowCount, columnCount) {
+        case 0...4: return 30
+        case 5...6: return 24
+        case 7...8: return 19
+        case 9...10: return 15
+        default: return 12
+        }
+    }
+
+    private var gridSpacing: CGFloat { max(rowCount, columnCount) >= 7 ? 5 : 8 }
 
     var body: some View {
-        VStack(spacing: 8) {
-            ForEach(0..<min(max(rows, 1), maxVisibleRows), id: \.self) { _ in
-                HStack(spacing: 8) {
-                    ForEach(0..<max(columns, 1), id: \.self) { _ in
-                        Text(item)
-                            .font(.system(size: 24))
+        VStack(spacing: 10) {
+            VStack(spacing: gridSpacing) {
+                ForEach(0..<rowCount, id: \.self) { _ in
+                    HStack(spacing: gridSpacing) {
+                        ForEach(0..<columnCount, id: \.self) { _ in
+                            Text(item)
+                                .font(.system(size: itemSize))
+                        }
                     }
                 }
             }
-            if rows > maxVisibleRows {
-                Text("+ \(rows - maxVisibleRows) more rows")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(DS.Color.textSecondary)
-            }
-            Text("\(rows) rows × \(columns) columns = ?")
+            Text("\(rowCount) rows × \(columnCount) columns = ?")
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(DS.Color.textSecondary)
                 .padding(.top, 4)

@@ -127,7 +127,7 @@ enum LockType: String, CaseIterable, Hashable {
         case .timed: "Timed Lock"
         case .full: "Full Lock"
         case .reward: "Reward Unlock"
-        case .educational: "Educational Unlock"
+        case .educational: "Reward Unlock"
         }
     }
 
@@ -136,7 +136,7 @@ enum LockType: String, CaseIterable, Hashable {
         case .timed: "Locks during scheduled hours"
         case .full: "Always blocked"
         case .reward: "Earn time by learning"
-        case .educational: "Complete lessons to unlock"
+        case .educational: "Earn time by learning"
         }
     }
 
@@ -145,9 +145,14 @@ enum LockType: String, CaseIterable, Hashable {
         case .timed: "clock.fill"
         case .full: "lock.fill"
         case .reward: "gift.fill"
-        case .educational: "graduationcap.fill"
+        case .educational: "gift.fill"
         }
     }
+
+    /// Educational is a legacy alias for Reward Unlock — both are quiz-gated access.
+    /// The UI collapses them so every quiz-unlock app shows the same gift icon and
+    /// "Reward Unlock" label. Always display/filter through this.
+    var normalized: LockType { self == .educational ? .reward : self }
 }
 
 struct AppLock: Identifiable, Hashable {
@@ -161,6 +166,9 @@ struct AppLock: Identifiable, Hashable {
     var requiredMinutes: Int = 15
     var requiredQuestions: Int = 10
     var requiredSubject: Subject = .math
+    /// For reward-unlock apps: how completed learning grants access.
+    /// One of "session", "time", or "daily" (mirrors the onboarding unlock rule).
+    var rewardRule: String = "session"
     var earnedMinutesAvailable: Int = 0
     var scheduleStart: Int = 16   // 4PM
     var scheduleEnd: Int = 21     // 9PM

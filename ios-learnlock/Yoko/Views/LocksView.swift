@@ -10,11 +10,17 @@ struct LocksView: View {
     @Environment(AppStore.self) private var store
     @Environment(ScreenTimeService.self) private var screenTime
     @State private var filter: LockType? = nil
-    @State private var selectedLock: AppLock? = nil
+    @State private var ruleEditLock: AppLock? = nil
     @State private var showAppPicker: Bool = false
+    @State private var toast: String? = nil
+    @State private var toastSeq: Int = 0
+
+    /// The rule types a parent can choose between (Educational is collapsed into
+    /// Reward Unlock, so it never appears as a separate option).
+    private let selectableTypes: [LockType] = [.reward, .timed, .full]
 
     var filtered: [AppLock] {
-        if let filter { return store.locks.filter { $0.type == filter } }
+        if let filter { return store.locks.filter { $0.type.normalized == filter } }
         return store.locks
     }
 
@@ -38,10 +44,44 @@ struct LocksView: View {
             .onChange(of: screenTime.selection) { _, _ in
                 screenTime.applyShields()
             }
-            .sheet(item: $selectedLock) { lock in
-                LockDetailSheet(lock: lock)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+            .sheet(item: $ruleEditLock) { lock in
+                SetUnlockRuleSheet(lock: lock) { type, rewardRule in
+                    applyRule(to: lock, type: type, rewardRule: rewardRule)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let toast {
+                    LockToast(message: toast)
+                        .padding(.bottom, 90)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+        }
+    }
+
+    // MARK: - Rule editing
+
+    private func applyRule(to lock: AppLock, type: LockType, rewardRule: String) {
+        store.setLockRule(lock, type: type, rewardRule: rewardRule)
+        presentToast(ruleToastMessage(name: lock.name, type: type, rewardRule: rewardRule))
+    }
+
+    private func ruleToastMessage(name: String, type: LockType, rewardRule: String) -> String {
+        switch type.normalized {
+        case .timed: return "\(name) set to Timed Lock"
+        case .full: return "\(name) set to Full Lock"
+        default: return "\(name) set to Reward Unlock · \(UnlockRuleOption.shortLabel(rewardRule))"
+        }
+    }
+
+    private func presentToast(_ message: String) {
+        toastSeq += 1
+        let seq = toastSeq
+        withAnimation(.spring(duration: 0.32)) { toast = message }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.6))
+            if seq == toastSeq {
+                withAnimation(.easeOut(duration: 0.3)) { toast = nil }
             }
         }
     }
@@ -188,7 +228,7 @@ struct LocksView: View {
             HStack(spacing: 8) {
                 Button("All") { filter = nil }
                     .buttonStyle(DSChipStyle(selected: filter == nil))
-                ForEach(LockType.allCases, id: \.self) { t in
+                ForEach(selectableTypes, id: \.self) { t in
                     Button(t.title) { filter = t }
                         .buttonStyle(DSChipStyle(selected: filter == t))
                 }
@@ -201,12 +241,9 @@ struct LocksView: View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader(title: "Apps")
             ForEach(filtered) { lock in
-                Button {
-                    selectedLock = lock
-                } label: {
-                    LockRow(lock: lock)
+                LockRow(lock: lock) {
+                    ruleEditLock = lock
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -215,6 +252,8 @@ struct LocksView: View {
 struct LockRow: View {
     @Environment(AppStore.self) private var store
     let lock: AppLock
+    /// Opens the "Set Unlock Rule" sheet for this app.
+    let onEditRule: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -226,16 +265,9 @@ struct LockRow: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(lock.iconColor)
             }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(lock.name).font(.dsHeadline).foregroundStyle(DS.Color.textPrimary)
-                HStack(spacing: 6) {
-                    Image(systemName: lock.type.symbol)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(DS.Color.accent)
-                    Text(lock.type.title)
-                        .font(.dsCaption)
-                        .foregroundStyle(DS.Color.textSecondary)
-                }
+                ruleTag
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {
@@ -245,9 +277,7 @@ struct LockRow: View {
                 ))
                 .labelsHidden()
                 .tint(DS.Color.accent)
-                Text("\(lock.earnedMinutesAvailable)m left")
-                    .font(.dsTiny)
-                    .foregroundStyle(DS.Color.textTertiary)
+                statusText
             }
         }
         .padding(14)
@@ -255,182 +285,186 @@ struct LockRow: View {
         .clipShape(.rect(cornerRadius: DS.Radius.medium))
         .overlay(RoundedRectangle(cornerRadius: DS.Radius.medium).stroke(DS.Color.border, lineWidth: 1))
     }
+
+    /// Tappable rule pill — the affordance to change this app's unlock rule.
+    private var ruleTag: some View {
+        Button(action: onEditRule) {
+            HStack(spacing: 6) {
+                Image(systemName: lock.type.normalized.symbol)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(DS.Color.accent)
+                Text(lock.type.normalized.title)
+                    .font(.dsCaption)
+                    .foregroundStyle(DS.Color.textPrimary)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(DS.Color.textTertiary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(DS.Color.accentSoft)
+            .clipShape(.capsule)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Full Lock has no unlock path, so a countdown would be misleading.
+    @ViewBuilder
+    private var statusText: some View {
+        if lock.type.normalized == .full {
+            Text("Always blocked")
+                .font(.dsTiny)
+                .foregroundStyle(DS.Color.textTertiary)
+        } else {
+            Text("\(lock.earnedMinutesAvailable)m left")
+                .font(.dsTiny)
+                .foregroundStyle(DS.Color.textTertiary)
+        }
+    }
 }
 
-// MARK: - Lock Detail Sheet
+// MARK: - Set Unlock Rule Sheet
 
-struct LockDetailSheet: View {
-    @Environment(AppStore.self) private var store
+/// Bottom sheet for changing a single app's unlock rule. Page one lets the parent
+/// pick the rule type (Reward / Timed / Full); choosing Reward pushes forward to
+/// the same three rule cards used in onboarding, with a back arrow to return.
+struct SetUnlockRuleSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State var lock: AppLock
+    let lock: AppLock
+    /// Called with the chosen type and, for reward locks, the unlock rule mode.
+    let onConfirm: (LockType, String) -> Void
+
+    @State private var selectedType: LockType
+    @State private var rewardRule: String
+    @State private var showRewardDetail: Bool = false
+
+    init(lock: AppLock, onConfirm: @escaping (LockType, String) -> Void) {
+        self.lock = lock
+        self.onConfirm = onConfirm
+        _selectedType = State(initialValue: lock.type.normalized)
+        _rewardRule = State(initialValue: lock.rewardRule)
+    }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 18) {
-                    headerCard
-                    typePicker
-                    requirementsCard
-                    schedulingCard
-                    Button {
-                        store.updateLock(lock)
-                        dismiss()
-                    } label: {
-                        Text("Save Changes")
-                    }
-                    .buttonStyle(DSPrimaryButtonStyle())
-                    .padding(.top, 8)
-                    Spacer(minLength: 30)
+            typePage
+                .navigationDestination(isPresented: $showRewardDetail) {
+                    rewardDetailPage
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-            }
-            .background(DS.Color.background)
-            .navigationTitle(lock.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(DS.Color.accent)
-                }
-            }
         }
+        .tint(DS.Color.accent)
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+        .presentationContentInteraction(.scrolls)
     }
 
-    private var headerCard: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(lock.iconColor.opacity(0.14))
-                    .frame(width: 64, height: 64)
-                Image(systemName: lock.symbol)
-                    .font(.system(size: 28, weight: .semibold))
-                    .foregroundStyle(lock.iconColor)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(lock.name).font(.dsTitle2).foregroundStyle(DS.Color.textPrimary)
-                Text(lock.category).font(.dsCaption).foregroundStyle(DS.Color.textSecondary)
-            }
-            Spacer()
-            Toggle("", isOn: $lock.enabled).labelsHidden().tint(DS.Color.accent)
-        }
-        .dsCard()
-    }
+    // MARK: Page 1 — pick the rule type
 
-    private var typePicker: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title: "Lock Type")
-            VStack(spacing: 10) {
-                ForEach(LockType.allCases, id: \.self) { t in
-                    Button {
-                        lock.type = t
-                    } label: {
-                        HStack(spacing: 14) {
-                            Image(systemName: t.symbol)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(lock.type == t ? .white : DS.Color.accent)
-                                .frame(width: 36, height: 36)
-                                .background(lock.type == t ? DS.Color.accent : DS.Color.accentSoft)
-                                .clipShape(.rect(cornerRadius: 10))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(t.title).font(.dsHeadline).foregroundStyle(DS.Color.textPrimary)
-                                Text(t.subtitle).font(.dsCaption).foregroundStyle(DS.Color.textSecondary)
-                            }
-                            Spacer()
-                            if lock.type == t {
-                                Image(systemName: "checkmark.circle.fill").foregroundStyle(DS.Color.accent)
-                            }
-                        }
-                        .padding(14)
-                        .background(DS.Color.surface)
-                        .clipShape(.rect(cornerRadius: DS.Radius.medium))
-                        .overlay(RoundedRectangle(cornerRadius: DS.Radius.medium)
-                            .stroke(lock.type == t ? DS.Color.accent : DS.Color.border, lineWidth: lock.type == t ? 2 : 1))
-                    }
-                    .buttonStyle(.plain)
+    private var typePage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Set Unlock Rule")
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.Color.textPrimary)
+                    Text("for \(lock.name)")
+                        .font(.dsCallout)
+                        .foregroundStyle(DS.Color.textSecondary)
                 }
-            }
-        }
-    }
+                .padding(.top, 12)
 
-    @ViewBuilder
-    private var requirementsCard: some View {
-        if lock.type == .reward || lock.type == .educational {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Unlock Requirements")
-                VStack(spacing: 14) {
-                    if lock.type == .reward {
-                        stepperRow(title: "Required minutes", value: $lock.requiredMinutes, range: 5...90, step: 5, suffix: "min")
+                VStack(spacing: 12) {
+                    typeCard(.reward, icon: "🎁", subtitle: "Answer questions to earn access")
+                    typeCard(.timed, icon: "⏱️", subtitle: "Allowed only during set hours")
+                    typeCard(.full, icon: "🔒", subtitle: "Always blocked, no unlock path")
+                }
+
+                Button {
+                    if selectedType == .reward {
+                        showRewardDetail = true
                     } else {
-                        stepperRow(title: "Required questions", value: $lock.requiredQuestions, range: 5...50, step: 5, suffix: "q")
-                        subjectPicker
+                        confirm()
                     }
+                } label: {
+                    Text(selectedType == .reward ? "Next" : "Set Rule")
                 }
-                .dsCard()
+                .buttonStyle(DSPrimaryButtonStyle())
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 30)
+        }
+        .background(DS.Color.background)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Cancel") { dismiss() }
+                    .foregroundStyle(DS.Color.textSecondary)
             }
         }
     }
 
-    private var subjectPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Subject")
-                .font(.dsCaption)
-                .foregroundStyle(DS.Color.textSecondary)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(Subject.allCases) { s in
-                        Button(s.title) { lock.requiredSubject = s }
-                            .buttonStyle(DSChipStyle(selected: lock.requiredSubject == s))
-                    }
-                }
-            }
+    private func typeCard(_ type: LockType, icon: String, subtitle: String) -> some View {
+        SelectableRow(
+            icon: icon,
+            title: type.title,
+            subtitle: subtitle,
+            titleFont: .system(size: 18, weight: .semibold, design: .rounded),
+            subtitleFont: .system(size: 14, weight: .regular, design: .rounded),
+            selected: selectedType == type
+        ) {
+            selectedType = type
         }
     }
 
-    private func stepperRow(title: String, value: Binding<Int>, range: ClosedRange<Int>, step: Int, suffix: String) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.dsHeadline).foregroundStyle(DS.Color.textPrimary)
-                Text("\(value.wrappedValue) \(suffix)").font(.dsCaption).foregroundStyle(DS.Color.textSecondary)
-            }
-            Spacer()
-            HStack(spacing: 0) {
-                stepperButton(symbol: "minus") {
-                    value.wrappedValue = max(range.lowerBound, value.wrappedValue - step)
-                }
-                Text("\(value.wrappedValue)")
-                    .font(.dsHeadline)
+    // MARK: Page 2 — reward unlock detail (reuses the onboarding cards)
+
+    private var rewardDetailPage: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                MascotGIF(url: GIFAssets.lockStanding, size: 130)
+                    .frame(maxWidth: .infinity)
+                Text("Set the Unlock Rule")
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(DS.Color.textPrimary)
-                    .frame(minWidth: 38)
-                stepperButton(symbol: "plus") {
-                    value.wrappedValue = min(range.upperBound, value.wrappedValue + step)
-                }
+                UnlockRuleCards(selection: $rewardRule)
+                Button { confirm() } label: { Text("Set Rule") }
+                    .buttonStyle(DSPrimaryButtonStyle())
+                    .padding(.top, 4)
             }
-            .background(DS.Color.background)
-            .clipShape(.capsule)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 30)
         }
+        .background(DS.Color.background)
+        .navigationTitle("Reward Unlock")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func stepperButton(symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 14, weight: .bold))
+    private func confirm() {
+        onConfirm(selectedType, rewardRule)
+        dismiss()
+    }
+}
+
+// MARK: - Toast
+
+/// Brief confirmation pill shown after a rule change.
+struct LockToast: View {
+    let message: String
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(DS.Color.accent)
-                .frame(width: 36, height: 36)
+            Text(message)
+                .font(.dsCaption)
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.leading)
         }
-    }
-
-    @ViewBuilder
-    private var schedulingCard: some View {
-        if lock.type == .timed {
-            VStack(alignment: .leading, spacing: 14) {
-                SectionHeader(title: "Schedule")
-                VStack(spacing: 14) {
-                    stepperRow(title: "Start hour", value: $lock.scheduleStart, range: 0...23, step: 1, suffix: ":00")
-                    stepperRow(title: "End hour", value: $lock.scheduleEnd, range: 0...23, step: 1, suffix: ":00")
-                }
-                .dsCard()
-            }
-        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(DS.Color.textPrimary)
+        .clipShape(.capsule)
+        .shadow(color: .black.opacity(0.22), radius: 16, y: 8)
+        .padding(.horizontal, 24)
     }
 }
