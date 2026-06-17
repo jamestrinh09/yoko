@@ -2,8 +2,6 @@
 //  OnboardingView.swift
 //  Yoko
 //
-//  Parent-facing onboarding flow (welcome → questions → demo → permissions → commitment).
-//
 
 import SwiftUI
 import UserNotifications
