@@ -140,17 +140,26 @@ enum CurriculumGenerator {
         let focusSkill = focus ?? pool.randomElement(using: &rng) ?? fallback
         let count = 3 // every lesson is exactly 3 questions
         var qs: [NormalizedQuestion] = []
-        var seenPrompts = Set<String>()
+        var seen = Set<String>()
         var safety = 0
-        while qs.count < count && safety < 40 {
+        // Every question in a lesson uses the same focus skill so the lesson
+        // stays on-topic (a "Telling Time" lesson contains only time questions).
+        // Dedup on the full question signature — not just the prompt — because
+        // several skills reuse one fixed prompt (e.g. "What time does the clock
+        // show?") with different answers; deduping on the prompt alone silently
+        // dropped those and left lessons with fewer than 3 questions.
+        while qs.count < count && safety < 60 {
             safety += 1
-            // Alternate focus skill with related siblings for spaced practice.
-            let useFocus = (qs.count == 0) || (qs.count == count - 1) || pool.count <= 1
-            let skill = useFocus ? focusSkill : (pool.randomElement(using: &rng) ?? focusSkill)
-            let candidate = generate(skill: skill, band: band, level: level + boost, rng: &rng)
-            // Avoid showing the same question twice inside one lesson.
-            guard seenPrompts.insert(candidate.prompt).inserted else { continue }
+            let candidate = generate(skill: focusSkill, band: band, level: level + boost, rng: &rng)
+            let signature = candidate.prompt + "|" + candidate.correctAnswer
+                + "|" + candidate.answerChoices.sorted().joined(separator: ",")
+            guard seen.insert(signature).inserted else { continue }
             qs.append(candidate)
+        }
+        // Guarantee exactly 3 questions even if a skill can't produce 3 distinct
+        // variations — pad with additional same-skill questions as a last resort.
+        while qs.count < count {
+            qs.append(generate(skill: focusSkill, band: band, level: level + boost, rng: &rng))
         }
         let questions = qs.map(toQuestion)
         let title = "\(focusSkill.title) Challenge"

@@ -14,6 +14,10 @@ struct LessonCompleteView: View {
     let result: LessonResult
     let rewards: [MilestoneReward]
     let childName: String
+    /// The unlock rule chosen in onboarding ("session", "time", or "daily").
+    /// Drives which primary reward is shown — screen-time minutes only appear
+    /// for the "time" rule.
+    let unlockRule: String
     let onDone: () -> Void
     let onTellParent: () -> Void
 
@@ -44,40 +48,47 @@ struct LessonCompleteView: View {
         return nil
     }
 
-    private var baseScreenTime: Int { result.totalQuestions / 2 + 5 }
-
     // MARK: - Body
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
-                background
+                splitBackground
                 VStack(spacing: 0) {
-                    Spacer(minLength: geo.size.height * 0.05)
+                    // Reserve the same hero spacing the question page uses (its
+                    // close-button row) so the mascot + card land in an identical
+                    // position — the card no longer looks taller than the lesson.
+                    Color.clear.frame(height: screenHeight * 0.06 + 36)
                     MascotGIFView(urlString: mascotURL)
-                        .frame(width: 132, height: 132)
+                        .frame(width: 162, height: 162)
+                        .padding(.top, -9)
+                        .offset(y: -35)
                         .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
                     card
                 }
             }
             .onAppear { screenHeight = geo.size.height }
+            .onChange(of: geo.size.height) { _, newValue in
+                if abs(newValue - screenHeight) > 1 { screenHeight = newValue }
+            }
         }
         .ignoresSafeArea()
         .onAppear(perform: runAnimations)
     }
 
-    private var background: some View {
+    private var splitBackground: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
                 Image("HeroBackground")
-                    .resizable().scaledToFill().scaleEffect(1.05).offset(y: -29)
+                    .resizable().scaledToFill().scaleEffect(1.05).offset(y: -72)
                     .clipped()
                 LinearGradient(colors: [.clear, .white.opacity(0.95)], startPoint: .top, endPoint: .bottom)
                     .frame(height: 110)
             }
-            .frame(height: screenHeight * 0.40)
+            .frame(height: screenHeight * 0.50)
             Color.white.frame(maxHeight: .infinity)
         }
+        .ignoresSafeArea()
     }
 
     // MARK: - Card
@@ -100,8 +111,8 @@ struct LessonCompleteView: View {
         .frame(maxWidth: .infinity)
         .background(Color.white)
         .clipShape(.rect(topLeadingRadius: 30, topTrailingRadius: 30))
-        .shadow(color: .black.opacity(0.05), radius: 16, x: 0, y: -4)
-        .padding(.top, 7)
+        .shadow(color: .black.opacity(0.04), radius: 16, x: 0, y: -4)
+        .padding(.top, -31)
     }
 
     private var headline: some View {
@@ -140,19 +151,19 @@ struct LessonCompleteView: View {
     @ViewBuilder
     private var rewardRows: some View {
         VStack(spacing: 12) {
-            infoRow(symbol: "clock.fill", tint: DS.Color.accent,
-                    text: "+\(baseScreenTime)m screen time earned", highlighted: false)
+            // The primary reward reflects the unlock rule the parent chose during
+            // onboarding — screen-time minutes are only "earned" for the time
+            // rule, not for the session/daily unlock rules.
+            primaryRewardCard
 
             if bonusMinutes > 0 {
-                infoRow(symbol: "party.popper.fill", tint: DS.Color.accent,
-                        text: "🎉 +\(bonusMinutes) min bonus free time earned!", highlighted: true)
+                rewardCard(symbol: "party.popper.fill", text: "🎉 +\(bonusMinutes) min bonus free time earned!")
                     .opacity(revealRewards ? 1 : 0)
                     .scaleEffect(revealRewards ? 1 : 0.85)
             }
 
             ForEach(Array(unlockedAchievements.enumerated()), id: \.offset) { _, a in
-                infoRow(symbol: a.symbol, tint: DS.Color.accent,
-                        text: "🏅 Achievement unlocked: \(a.title)", highlighted: true)
+                rewardCard(symbol: a.symbol, text: "🏅 Achievement unlocked: \(a.title)")
                     .opacity(revealRewards ? 1 : 0)
                     .scaleEffect(revealRewards ? 1 : 0.85)
             }
@@ -163,30 +174,51 @@ struct LessonCompleteView: View {
                     .scaleEffect(revealRewards ? 1 : 0.9)
             }
         }
+        .padding(.top, 10)
     }
 
-    private func infoRow(symbol: String, tint: Color, text: String, highlighted: Bool) -> some View {
+    /// The headline reward, matched to the onboarding unlock rule so it never
+    /// claims screen time was earned when the rule doesn't grant minutes.
+    @ViewBuilder
+    private var primaryRewardCard: some View {
+        switch unlockRule {
+        case "time":
+            rewardCard(symbol: "clock.fill", text: "+30m screen time earned")
+        case "daily":
+            rewardCard(symbol: "sun.max.fill", text: "Play unlocked for the rest of today!")
+        default:
+            rewardCard(symbol: "lock.open.fill", text: "Play unlocked for this session!")
+        }
+    }
+
+    /// Gradient-orange reward row used for earned time, bonuses and achievements.
+    private func rewardCard(symbol: String, text: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: symbol)
                 .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(tint)
+                .foregroundStyle(.white)
                 .frame(width: 34, height: 34)
-                .background(DS.Color.accentSoft)
+                .background(.white.opacity(0.22))
                 .clipShape(.rect(cornerRadius: 10))
             Text(text)
                 .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(DS.Color.textPrimary)
+                .foregroundStyle(.white)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(highlighted ? DS.Color.accentSoft : DS.Color.surfaceWarm)
+        .background(rewardGradient)
         .clipShape(.rect(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(highlighted ? DS.Color.accent.opacity(0.5) : DS.Color.border, lineWidth: highlighted ? 1.5 : 1)
+        .shadow(color: DS.Color.accent.opacity(0.28), radius: 10, y: 5)
+    }
+
+    private var rewardGradient: LinearGradient {
+        LinearGradient(
+            colors: [Color(red: 1.0, green: 0.58, blue: 0.15), Color(red: 1.0, green: 0.42, blue: 0.0)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
         )
     }
 

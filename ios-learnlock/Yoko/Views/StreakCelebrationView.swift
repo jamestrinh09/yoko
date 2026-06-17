@@ -17,17 +17,14 @@ struct StreakCelebrationView: View {
 
 
 
-    private var streakUnit: String { streak == 1 ? "day" : "days" }
-
     var body: some View {
         ZStack {
             background
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
-                streakCard
-                    .scaleEffect(appear ? 1 : 0.85)
+                streakContent
+                    .scaleEffect(appear ? 1 : 0.9)
                     .opacity(appear ? 1 : 0)
-                    .offset(y: 6)
                 Spacer(minLength: 0)
                 continueButton
             }
@@ -63,35 +60,52 @@ struct StreakCelebrationView: View {
 
     // MARK: - Streak Card
 
-    private var streakCard: some View {
+    /// Matches the onboarding streak step exactly: mascot GIF, white reveal text,
+    /// and a translucent weekly streak card — no solid white card behind it.
+    private var streakContent: some View {
         VStack(spacing: 14) {
             SequencedStreakGIFView(firstURL: GIFAssets.streak1, loopURL: GIFAssets.streak2)
-                .frame(width: 207, height: 207)
-                .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
+                .frame(width: 246, height: 246)
+                .frame(maxWidth: .infinity)
 
-            StreakRevealText(text: "\(streak) \(streakUnit) streak!", size: 26, color: DS.Color.accent)
-                .padding(.top, -10)
+            StreakRevealText(text: "Lesson Completed! 🎉", size: 30, color: .white)
+                .padding(.top, -18)
 
-            Text(message)
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
-                .foregroundStyle(DS.Color.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 8)
+            weeklyStreakCard
+                .offset(y: 6)
         }
-        .padding(.vertical, 32)
-        .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity)
-        .background(Color.white)
-        .clipShape(.rect(cornerRadius: 32))
-        .shadow(color: .black.opacity(0.18), radius: 28, y: 14)
     }
 
-    private var message: String {
-        switch streak {
-        case 1: return "Great start, \(childName)! Come back tomorrow to keep it going."
-        case 2...4: return "\(childName) is building a habit. Keep the flame alive!"
-        default: return "\(childName) is on fire! Learning every day pays off."
+    private var weeklyStreakCard: some View {
+        HStack {
+            ForEach(Array(["M", "T", "W", "T", "F", "S", "S"].enumerated()), id: \.offset) { _, day in
+                VStack(spacing: 8) {
+                    Text(day)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.Color.textSecondary)
+                    ZStack {
+                        Circle()
+                            .fill(day == "W" ? DS.Color.accent : Color.white.opacity(0.5))
+                            .frame(width: 38, height: 38)
+                        if day == "W" {
+                            Text("🔥")
+                                .font(.system(size: 20))
+                        } else {
+                            Circle()
+                                .fill(Color(red: 0.85, green: 0.85, blue: 0.85))
+                                .frame(width: 8, height: 8)
+                        }
+                    }
+                }
+            }
         }
+        .padding(22)
+        .background(.white.opacity(0.42))
+        .clipShape(.rect(cornerRadius: 28))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28)
+                .stroke(.white.opacity(0.55), lineWidth: 1)
+        )
     }
 
     private var continueButton: some View {

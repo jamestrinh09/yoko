@@ -20,7 +20,6 @@ struct LessonPlayerView: View {
     @State private var matchSelections: [String: String] = [:]
     @State private var matchPicked: String? = nil
     @State private var showSummary: Bool = false
-    @State private var lastAnswerWasWrong: Bool = false
     @State private var wrongCount: Int = 0
     @State private var keyGlow: Bool = false
     @State private var screenHeight: CGFloat = 852
@@ -51,6 +50,7 @@ struct LessonPlayerView: View {
                         result: lessonResult,
                         rewards: lessonRewards,
                         childName: store.profile.name,
+                        unlockRule: store.unlockRule,
                         onDone: { withAnimation(.spring(duration: 0.5)) { showStreak = true } },
                         onTellParent: { store.tellParentAboutPromotion() }
                     )
@@ -121,7 +121,7 @@ struct LessonPlayerView: View {
             mascotImage(urlString: mascotURL)
                 .frame(width: 162, height: 162)
                 .padding(.top, -9)
-                .offset(y: -30)
+                .offset(y: -35)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
             // White content area with rounded top corners layered over hero (up 15pt)
@@ -310,9 +310,11 @@ struct LessonPlayerView: View {
         if showSummary {
             return wrongCount > lesson.questions.count / 2 ? GIFAssets.proud : GIFAssets.excited
         }
-        if lastAnswerWasWrong {
-            return GIFAssets.sad
-        }
+        // React to the player's answer just like the demo questions: celebrate a
+        // correct pick and show empathy on a wrong one.
+        if feedback == .correct { return GIFAssets.excited }
+        if feedback == .incorrect { return GIFAssets.sad }
+        // No answer yet — the mood reflects the question's position in the lesson.
         if index == lesson.questions.count - 1 {
             return GIFAssets.determined
         }
@@ -408,7 +410,6 @@ struct LessonPlayerView: View {
         }
         if isCorrect {
             correctCount += 1
-            lastAnswerWasWrong = false
             withAnimation(.spring(duration: 0.45, bounce: 0.3)) {
                 keyGlow = true
             }
@@ -430,7 +431,6 @@ struct LessonPlayerView: View {
             }
         } else {
             wrongCount += 1
-            lastAnswerWasWrong = true
         }
         UIImpactFeedbackGenerator(style: isCorrect ? .medium : .rigid).impactOccurred()
     }
