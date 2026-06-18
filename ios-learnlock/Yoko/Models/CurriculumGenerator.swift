@@ -370,8 +370,9 @@ enum CurriculumGenerator {
         case .grade3: cap = 100
         }
         let scale = cap + level * (cap / 5)
-        let a = 2 + Int(rng.next() % UInt64(scale))
-        let b = Int(rng.next() % UInt64(a))
+        // Keep both operands >= 1 so the question never reads "5 take away 0".
+        let a = 3 + Int(rng.next() % UInt64(scale))
+        let b = 1 + Int(rng.next() % UInt64(a - 1))
         let diff = a - b
         var content: [String: String] = ["equation": "\(a) - \(b) = __"]
         if a <= 6 {

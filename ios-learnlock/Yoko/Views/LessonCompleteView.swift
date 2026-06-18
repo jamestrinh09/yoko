@@ -8,7 +8,6 @@
 //
 
 import SwiftUI
-import WebKit
 
 struct LessonCompleteView: View {
     let result: LessonResult
@@ -59,10 +58,12 @@ struct LessonCompleteView: View {
                     // close-button row) so the mascot + card land in an identical
                     // position — the card no longer looks taller than the lesson.
                     Color.clear.frame(height: screenHeight * 0.06 + 36)
-                    MascotGIFView(urlString: mascotURL)
+                    // Same GIF renderer + offset as the question page so the
+                    // mascot and card land at an identical level.
+                    AnimatedGIFView(urlString: mascotURL)
                         .frame(width: 162, height: 162)
                         .padding(.top, -9)
-                        .offset(y: -35)
+                        .offset(y: -40)
                         .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
                     card
                 }
@@ -286,41 +287,4 @@ struct LessonCompleteView: View {
             withAnimation(.spring(duration: 0.5, bounce: 0.3)) { revealRewards = true }
         }
     }
-}
-
-// MARK: - Mascot GIF
-
-private struct MascotGIFView: UIViewRepresentable {
-    let urlString: String
-
-    func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
-        webView.isOpaque = false
-        webView.backgroundColor = .clear
-        webView.scrollView.backgroundColor = .clear
-        webView.scrollView.isScrollEnabled = false
-        webView.scrollView.contentInsetAdjustmentBehavior = .never
-        return webView
-    }
-
-    func updateUIView(_ webView: WKWebView, context: Context) {
-        guard context.coordinator.loadedURL != urlString else { return }
-        context.coordinator.loadedURL = urlString
-        let css = "<style>html,body{margin:0;background:transparent;width:100%;height:100%;overflow:hidden;}img{width:100%;height:100%;object-fit:contain;display:block;}</style>"
-        if let data = GIFCache.shared.data(for: urlString) {
-            let b64 = data.base64EncodedString()
-            let html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>\(css)</head><body><img src='data:image/gif;base64,\(b64)' /></body></html>"
-            webView.loadHTMLString(html, baseURL: nil)
-        } else if let url = URL(string: urlString) {
-            let html = "<html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'>\(css)</head><body><img src='\(url.absoluteString)' /></body></html>"
-            webView.loadHTMLString(html, baseURL: url.deletingLastPathComponent())
-            URLSession.shared.dataTask(with: url) { data, _, _ in
-                guard let data else { return }
-                GIFCache.shared.set(data, for: urlString)
-            }.resume()
-        }
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    final class Coordinator { var loadedURL: String? }
 }

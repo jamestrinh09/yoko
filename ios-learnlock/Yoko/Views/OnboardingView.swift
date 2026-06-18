@@ -278,6 +278,7 @@ struct OnboardingView: View {
         let gen = UIImpactFeedbackGenerator(style: .medium)
         gen.impactOccurred()
         store.updateProfileName(childName)
+        store.setGrade(gradeNumeric(grade))
         store.unlockRule = unlockRule
         store.applyOnboardingRuleToAllLocks(unlockRule)
         store.onboardingComplete = true
@@ -409,7 +410,8 @@ struct OnboardingView: View {
                 .foregroundStyle(DS.Color.textPrimary)
 
             let grades: [(id: String, label: String, desc: String)] = [
-                ("kindergarten", "Preschool / Kindergarten", "Counting, letters, sounds"),
+                ("preschool", "Preschool", "Shapes, early counting, first letters"),
+                ("kindergarten", "Kindergarten", "Counting, letters, sounds"),
                 ("1st", "1st Grade", "Addition, subtraction, sight words"),
                 ("2nd", "2nd Grade", "Place value, reading fluency"),
                 ("3rd", "3rd Grade", "Multiplication, grammar"),
@@ -957,7 +959,7 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 8)
                 .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 8)
-                .offset(y: -20)
+                .offset(y: -40)
 
             VStack(spacing: 10) {
                 Text("Turn on notifications")
@@ -971,7 +973,7 @@ struct OnboardingView: View {
                     .lineSpacing(4)
             }
             .padding(.horizontal, 8)
-            .offset(y: -40)
+            .offset(y: -70)
 
             VStack(spacing: 0) {
                 permissionRow(
@@ -999,7 +1001,7 @@ struct OnboardingView: View {
                 RoundedRectangle(cornerRadius: DS.Radius.large)
                     .stroke(DS.Color.border, lineWidth: 1)
             )
-            .offset(y: -70)
+            .offset(y: -90)
         }
         .padding(.top, 12)
     }
@@ -1043,6 +1045,7 @@ struct OnboardingView: View {
 
     private func gradeLabel(_ id: String) -> String {
         switch id {
+        case "preschool": return "Preschool"
         case "kindergarten": return "Kindergarten"
         case "1st": return "1st Grade"
         case "2nd": return "2nd Grade"
@@ -1050,6 +1053,21 @@ struct OnboardingView: View {
         case "4th": return "4th Grade"
         case "5th": return "5th Grade"
         default: return "—"
+        }
+    }
+
+    /// Maps the onboarding grade selection to the numeric grade the curriculum
+    /// generator expects (Preschool = -1, Kindergarten = 0, 1st = 1, …).
+    private func gradeNumeric(_ id: String) -> Int {
+        switch id {
+        case "preschool": return -1
+        case "kindergarten": return 0
+        case "1st": return 1
+        case "2nd": return 2
+        case "3rd": return 3
+        case "4th": return 4
+        case "5th": return 5
+        default: return 1
         }
     }
 

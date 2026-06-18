@@ -15,6 +15,12 @@ struct StreakCelebrationView: View {
 
     @State private var appear: Bool = false
 
+    /// Celebratory copy that names the current day streak.
+    private var streakText: String {
+        let days = max(1, streak)
+        return "\(days) Day Streak! 🔥"
+    }
+
 
 
     var body: some View {
@@ -68,7 +74,7 @@ struct StreakCelebrationView: View {
                 .frame(width: 246, height: 246)
                 .frame(maxWidth: .infinity)
 
-            StreakRevealText(text: "Lesson Completed! 🎉", size: 30, color: .white)
+            StreakRevealText(text: streakText, size: 30, color: .white)
                 .padding(.top, -18)
 
             weeklyStreakCard

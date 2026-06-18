@@ -31,13 +31,7 @@ enum SeedData {
     }
 
     static func achievements() -> [Achievement] {
-        [
-            Achievement(title: "First Step", detail: "Complete your first lesson", symbol: "shoeprints.fill", unlocked: false),
-            Achievement(title: "Streak Starter", detail: "Learn 3 days in a row", symbol: "flame.fill", unlocked: false),
-            Achievement(title: "Math Whiz", detail: "Complete 5 math lessons", symbol: "function", unlocked: false),
-            Achievement(title: "Early Bird", detail: "Learn before 9 AM", symbol: "sunrise.fill", unlocked: false),
-            Achievement(title: "Word Builder", detail: "Finish 10 English lessons", symbol: "textformat.abc", unlocked: false),
-            Achievement(title: "Marathoner", detail: "Hit 30-day streak", symbol: "trophy.fill", unlocked: false)
-        ]
+        // The full unlockable catalog, shown locked until earned.
+        MilestoneEngine.lockedCatalog
     }
 }

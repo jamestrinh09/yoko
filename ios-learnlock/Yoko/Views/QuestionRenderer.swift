@@ -84,7 +84,20 @@ struct QuestionRenderer: View {
 
     // MARK: - Question Meta
 
-    private var questionTitle: String { normalized?.prompt ?? question.prompt }
+    private var questionTitle: String {
+        let raw = normalized?.prompt ?? question.prompt
+        // Vocabulary prompts read better without a trailing period.
+        return template == "vocabulary_matching" ? raw.strippedTrailingPeriod : raw
+    }
+
+    /// True when the answer choices are single emoji glyphs (picture vocab).
+    private var isEmojiChoices: Bool {
+        !choices.isEmpty && choices.allSatisfy { choice in
+            let trimmed = choice.trimmingCharacters(in: .whitespaces)
+            return trimmed.unicodeScalars.contains { $0.properties.isEmojiPresentation || $0.properties.isEmoji }
+                && trimmed.count <= 2
+        }
+    }
 
     private var isUnscramble: Bool { template == "unscramble_word" }
 
@@ -104,7 +117,8 @@ struct QuestionRenderer: View {
     private var questionKey: String { normalized?.id ?? question.prompt }
 
     private var questionHelper: String {
-        normalized?.directions ?? "Tap your answer"
+        let raw = normalized?.directions ?? "Tap your answer"
+        return template == "vocabulary_matching" ? raw.strippedTrailingPeriod : raw
     }
 
     // MARK: - Universal Hint
@@ -240,7 +254,12 @@ struct QuestionRenderer: View {
                 fadedChoice: hintFadedChoice
             ) { selectedAnswer = $0 }
 
-        case "choose_correct_spelling", "sight_word_recognition", "vocabulary_matching":
+        case "vocabulary_matching":
+            // Emoji-picture vocab renders the choices twice as large; synonym
+            // vocab (word choices) keeps the standard word style.
+            visualTapGrid(items: choices, style: isEmojiChoices ? .emoji : .word)
+
+        case "choose_correct_spelling", "sight_word_recognition":
             visualTapGrid(items: choices, style: englishChoiceStyle)
 
         case "rhyming_words", "word_families":
@@ -507,12 +526,12 @@ struct QuestionRenderer: View {
         // generic multiple-choice question handled by the `default` interactive
         // case — for those, rendering the choices here too would duplicate them and
         // produce the 2x2 grid of repeated options.
-        // make_ten and division_as_sharing are now self-answering interactions
-        // (filling the frame / distributing the items reports the answer), so they
-        // no longer render a separate choice row.
+        // make_ten keeps its tappable ten-frame AND shows multiple-choice answers
+        // below, so the child can either count by filling circles or pick a number.
+        // division_as_sharing remains self-answering (distributing reports it).
         let visualWithSeparateChoices: Set<String> = [
             "counting_objects", "addition_by_counting", "subtraction_by_taking_away",
-            "multiplication_arrays",
+            "multiplication_arrays", "make_ten",
             "pattern_recognition", "fractions", "telling_time", "reading_comprehension"
         ]
         return visualWithSeparateChoices.contains(template) && choices.count > 1
@@ -594,7 +613,14 @@ extension String {
 
 // MARK: - Choice Style
 
-private enum ChoiceStyle { case word, letter, number }
+private enum ChoiceStyle { case word, letter, number, emoji }
+
+private extension String {
+    /// Drops a single trailing period (used for vocab title/subtext copy).
+    var strippedTrailingPeriod: String {
+        hasSuffix(".") ? String(dropLast()) : self
+    }
+}
 private struct ChoiceStyleKey: EnvironmentKey { static let defaultValue: ChoiceStyle = .word }
 private extension EnvironmentValues {
     var choiceStyle: ChoiceStyle {
@@ -648,12 +674,12 @@ struct QuestionHintButton: View {
             .clipShape(.capsule)
             .shadow(
                 color: glowActive
-                    ? Color.yellow.opacity(state.glow ? 0.85 : 0.25)
+                    ? Color.yellow.opacity(state.glow ? 0.35 : 0.15)
                     : Color.black.opacity(0.08),
-                radius: glowActive ? (state.glow ? 16 : 6) : 4,
+                radius: glowActive ? (state.glow ? 8 : 5) : 4,
                 y: 2
             )
-            .scaleEffect(glowActive && state.glow ? 1.06 : 1.0)
+            .scaleEffect(glowActive && state.glow ? 1.03 : 1.0)
         }
         .buttonStyle(.plain)
         .disabled(state.isLocked || state.revealed)
@@ -719,13 +745,26 @@ struct FlowRow: View {
         }
     }
 
-    private var minWidth: CGFloat { style == .letter ? 72 : 96 }
-    private var height: CGFloat { style == .letter ? 78 : 66 }
+    private var minWidth: CGFloat {
+        switch style {
+        case .letter: 72
+        case .emoji: 110
+        default: 96
+        }
+    }
+    private var height: CGFloat {
+        switch style {
+        case .letter: 78
+        case .emoji: 110
+        default: 66
+        }
+    }
     private var font: Font {
         switch style {
         case .letter: .system(size: 36, weight: .heavy, design: .rounded)
         case .number: .system(size: 26, weight: .heavy, design: .rounded)
         case .word: .system(size: 22, weight: .heavy, design: .rounded)
+        case .emoji: .system(size: 44)
         }
     }
 }

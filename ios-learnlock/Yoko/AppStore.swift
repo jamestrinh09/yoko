@@ -240,7 +240,10 @@ final class AppStore {
     }
 
     private func mirrorAchievement(_ a: Achievement) {
-        if !achievements.contains(where: { $0.title == a.title }) {
+        // Flip the matching catalog badge to unlocked; append if it's not seeded.
+        if let idx = achievements.firstIndex(where: { $0.title == a.title }) {
+            achievements[idx].unlocked = true
+        } else {
             achievements.append(a)
         }
     }

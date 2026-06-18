@@ -25,6 +25,29 @@ nonisolated enum MilestoneEngine {
     static let mathWhiz       = Achievement(title: "Math Whiz 🔢", detail: "Finish 5 math lessons", symbol: "function", unlocked: true)
     static let wordWizard     = Achievement(title: "Word Wizard 📖", detail: "Finish 5 English lessons", symbol: "book.fill", unlocked: true)
     static let gradeGraduate  = Achievement(title: "Grade Graduate 🎓", detail: "Move up to the next grade", symbol: "graduationcap.fill", unlocked: true)
+    static let risingStar     = Achievement(title: "Rising Star 🌟", detail: "Finish 50 lessons", symbol: "sparkles", unlocked: true)
+    static let centuryClub    = Achievement(title: "Century Club 💯", detail: "Finish 100 lessons", symbol: "100.circle.fill", unlocked: true)
+    static let flawless       = Achievement(title: "Flawless 💎", detail: "Get 10 perfect lessons", symbol: "diamond.fill", unlocked: true)
+    static let mathMaster     = Achievement(title: "Math Master 🧮", detail: "Finish 15 math lessons", symbol: "x.squareroot", unlocked: true)
+    static let storyMaster    = Achievement(title: "Story Master 📚", detail: "Finish 15 English lessons", symbol: "books.vertical.fill", unlocked: true)
+    static let unstoppable    = Achievement(title: "Unstoppable 🚀", detail: "Reach a 14-day streak", symbol: "bolt.horizontal.fill", unlocked: true)
+    static let monthlyMaster  = Achievement(title: "Monthly Master 📅", detail: "Reach a 30-day streak", symbol: "trophy.fill", unlocked: true)
+    static let scholar        = Achievement(title: "Scholar 🦉", detail: "Earn 1,000 lifetime XP", symbol: "brain.fill", unlocked: true)
+    static let bigBrain       = Achievement(title: "Big Brain 🧩", detail: "Earn 5,000 lifetime XP", symbol: "puzzlepiece.fill", unlocked: true)
+
+    /// Every achievement in display order. Used to seed the locked grid so the
+    /// Rewards tab shows the full set of unlockable badges from day one.
+    static let catalog: [Achievement] = [
+        firstStep, sharpStart, sharpMind, committed, risingStar, centuryClub,
+        hatTrick, perfectionist, flawless, streakStarter, weekWarrior, unstoppable,
+        monthlyMaster, mathWhiz, mathMaster, wordWizard, storyMaster,
+        scholar, bigBrain, gradeGraduate
+    ]
+
+    /// The catalog rendered as locked placeholders for the initial Rewards grid.
+    static var lockedCatalog: [Achievement] {
+        catalog.map { Achievement(title: $0.title, detail: $0.detail, symbol: $0.symbol, unlocked: false) }
+    }
 
     // MARK: - Evaluation
 
@@ -65,7 +88,16 @@ nonisolated enum MilestoneEngine {
         if profile.streak == 3 { award(streakStarter) }
         if profile.streak == 7 { award(weekWarrior) }
         if mathLessonsCompleted == 5 { award(mathWhiz) }
+        if mathLessonsCompleted == 15 { award(mathMaster) }
         if englishLessonsCompleted == 5 { award(wordWizard) }
+        if englishLessonsCompleted == 15 { award(storyMaster) }
+        if profile.totalLessonsCompleted == 50 { award(risingStar) }
+        if profile.totalLessonsCompleted == 100 { award(centuryClub) }
+        if profile.perfectLessons == 10 { award(flawless) }
+        if profile.streak == 14 { award(unstoppable) }
+        if profile.streak == 30 { award(monthlyMaster) }
+        if profile.lifetimeXP >= 1000 { award(scholar) }
+        if profile.lifetimeXP >= 5000 { award(bigBrain) }
 
         // Grade promotion eligibility — all conditions simultaneously true.
         if profile.totalLessonsCompleted >= 40,

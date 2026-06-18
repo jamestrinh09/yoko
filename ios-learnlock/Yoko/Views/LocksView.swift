@@ -174,6 +174,7 @@ struct LocksView: View {
                 initialType: .reward,
                 initialRule: "session",
                 showSkip: true,
+                skipRewardDetail: true,
                 apply: { type, rule in
                     store.setLockRuleForAll(type: type, rewardRule: rule)
                     presentToast(bulkToastMessage(count: store.locks.count, type: type, rewardRule: rule))
@@ -565,6 +566,9 @@ struct RuleSheetContext: Identifiable {
     let initialRule: String
     /// When true, shows a "Skip — I'll set these individually" option.
     let showSkip: Bool
+    /// When true, choosing Reward Unlock confirms immediately instead of pushing
+    /// the second "Reward Unlock" detail page (used by the post-picker prompt).
+    var skipRewardDetail: Bool = false
     /// Applies the chosen rule. Called on confirm; never on skip/cancel.
     let apply: (LockType, String) -> Void
 }
@@ -621,13 +625,13 @@ struct SetUnlockRuleSheet: View {
                 }
 
                 Button {
-                    if selectedType == .reward {
+                    if selectedType == .reward && !context.skipRewardDetail {
                         showRewardDetail = true
                     } else {
                         confirm()
                     }
                 } label: {
-                    Text(selectedType == .reward ? "Next" : "Set Rule")
+                    Text(selectedType == .reward && !context.skipRewardDetail ? "Next" : "Set Rule")
                 }
                 .buttonStyle(DSPrimaryButtonStyle())
 

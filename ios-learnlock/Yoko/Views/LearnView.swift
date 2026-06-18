@@ -83,7 +83,7 @@ struct LearnView: View {
                 Text("Grade")
                     .font(.dsCaption)
                     .foregroundStyle(DS.Color.textSecondary)
-                Text("\(store.profile.grade)")
+                Text(gradeBadge(store.profile.grade))
                     .font(.dsTitle)
                     .foregroundStyle(DS.Color.textPrimary)
             }
@@ -106,6 +106,16 @@ struct LearnView: View {
         .shadow(color: DS.Color.accent.opacity(0.24), radius: 16, y: 8)
         .disabled(nextLesson == nil)
         .opacity(nextLesson == nil ? 0.55 : 1)
+    }
+
+    /// Short grade badge shown in the overview: Preschool → "P", Kindergarten →
+    /// "K", and numeric grades show their number.
+    private func gradeBadge(_ grade: Int) -> String {
+        switch grade {
+        case ...(-1): return "P"
+        case 0: return "K"
+        default: return "\(grade)"
+        }
     }
 
     private var nextLesson: Lesson? {

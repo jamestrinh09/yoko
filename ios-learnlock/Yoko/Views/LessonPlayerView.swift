@@ -31,6 +31,9 @@ struct LessonPlayerView: View {
     @State private var lessonResult: LessonResult?
     @State private var lessonRewards: [MilestoneReward] = []
     @State private var showStreak: Bool = false
+    /// True only when the just-finished lesson was the first one completed today,
+    /// so the streak celebration is shown once per day rather than every lesson.
+    @State private var streakEligible: Bool = false
     @State private var unscramble = UnscrambleState()
     @State private var hint = QuestionHintState()
 
@@ -52,7 +55,13 @@ struct LessonPlayerView: View {
                         rewards: lessonRewards,
                         childName: store.profile.name,
                         unlockRule: store.unlockRule,
-                        onDone: { withAnimation(.spring(duration: 0.5)) { showStreak = true } },
+                        onDone: {
+                            if streakEligible {
+                                withAnimation(.spring(duration: 0.5)) { showStreak = true }
+                            } else {
+                                dismiss()
+                            }
+                        },
                         onTellParent: { store.tellParentAboutPromotion() }
                     )
                 } else {
@@ -122,7 +131,7 @@ struct LessonPlayerView: View {
             mascotImage(urlString: mascotURL)
                 .frame(width: 162, height: 162)
                 .padding(.top, -9)
-                .offset(y: -35)
+                .offset(y: -40)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
             // White content area with rounded top corners layered over hero (up 15pt)
@@ -247,25 +256,27 @@ struct LessonPlayerView: View {
     // MARK: - Key Progress (Bottom Centered)
 
     private var keyProgressRow: some View {
-        HStack(spacing: 0) {
-            if unscramble.active {
-                UnscrambleBackButton(state: unscramble)
-                Spacer(minLength: 4)
-            }
-            HStack(spacing: 16) {
-                ForEach(0..<lesson.questions.count, id: \.self) { keyIndex in
-                    keyCircle(for: keyIndex)
-                }
-            }
-            if unscramble.active {
-                Spacer(minLength: 4)
-                UnscrambleHintButton(state: unscramble)
-            } else if hint.active {
-                Spacer(minLength: 4)
-                QuestionHintButton(state: hint)
+        // Keys stay centered in the row; the unscramble back/hint buttons dock to
+        // the edges via an overlay so they never push the keys off-center.
+        HStack(spacing: 16) {
+            ForEach(0..<lesson.questions.count, id: \.self) { keyIndex in
+                keyCircle(for: keyIndex)
             }
         }
         .frame(maxWidth: .infinity)
+        .overlay {
+            HStack(spacing: 0) {
+                if unscramble.active {
+                    UnscrambleBackButton(state: unscramble)
+                }
+                Spacer(minLength: 0)
+                if unscramble.active {
+                    UnscrambleHintButton(state: unscramble)
+                } else if hint.active {
+                    QuestionHintButton(state: hint)
+                }
+            }
+        }
         .animation(.spring(duration: 0.3), value: unscramble.active)
         .animation(.spring(duration: 0.3), value: hint.active)
     }
@@ -458,6 +469,8 @@ struct LessonPlayerView: View {
             let outcome = store.completeLesson(lesson, correctCount: correctCount)
             lessonResult = outcome.result
             lessonRewards = outcome.rewards
+            // Only the first completed lesson of the day earns the streak page.
+            streakEligible = store.profile.lessonsCompletedToday == 1
             withAnimation(.spring(duration: 0.5)) { showSummary = true }
             if account.isLinked {
                 let snapshot = store.exportSnapshot()
