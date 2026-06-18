@@ -410,7 +410,10 @@ enum CurriculumGenerator {
         let forward = Int(rng.next() % 2) == 0
         // Cap the jump so the landing never leaves 0...12.
         let room = forward ? (12 - start) : start
-        let jumpCap = max(1, min(5, room))
+        // Level scaling: longer jumps at higher levels (jumpCap = 1 + level,
+        // bounded by the remaining room and the 0...12 range).
+        let lvl = max(1, level)
+        let jumpCap = max(1, min(1 + lvl, room))
         let jump = 1 + Int(rng.next() % UInt64(jumpCap))
         let landing = forward ? start + jump : start - jump
         let prompt = forward
@@ -435,9 +438,11 @@ enum CurriculumGenerator {
     }
 
     private static func genSkipCounting(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        let steps = [2, 5, 10]
+        // Level scaling: bigger / less obvious step sizes as the level rises.
+        let lvl = max(1, level)
+        let steps: [Int] = lvl <= 1 ? [2, 5] : lvl == 2 ? [2, 5, 10] : [3, 4, 5, 10]
         let step = steps.randomElement(using: &rng) ?? 2
-        let start = step * (1 + Int(rng.next() % 3))
+        let start = step * (1 + Int(rng.next() % UInt64(2 + lvl)))
         let seq = (0..<4).map { start + step * $0 }
         let next = start + step * 4
         let seqText = seq.map(String.init).joined(separator: ", ") + ", __"
@@ -450,7 +455,11 @@ enum CurriculumGenerator {
     }
 
     private static func genArray(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        let maxDim = band == .grade2 ? 5 : 6
+        // Level scaling: larger array dimensions at higher levels.
+        // maxDim = min(2 + level, cap) where cap = 6 (grade2) or 8.
+        let lvl = max(1, level)
+        let cap = band == .grade2 ? 6 : 8
+        let maxDim = max(3, min(2 + lvl, cap))
         let rows = 2 + Int(rng.next() % UInt64(maxDim - 1))
         let cols = 2 + Int(rng.next() % UInt64(maxDim - 1))
         let total = rows * cols
@@ -464,8 +473,12 @@ enum CurriculumGenerator {
     }
 
     private static func genDivision(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        let per = 2 + Int(rng.next() % 5)
-        let groups = 2 + Int(rng.next() % 4)
+        // Level scaling: larger share-per-group and more groups (kept even so the
+        // tap-to-distribute interaction always resolves to an equal split).
+        // per ∈ [2, 2+level], groups ∈ [2, 1+min(level,3)+1].
+        let lvl = max(1, level)
+        let per = 2 + Int(rng.next() % UInt64(1 + lvl))
+        let groups = 2 + Int(rng.next() % UInt64(min(lvl, 3) + 1))
         let total = per * groups
         let emoji = animalEmojis.randomElement(using: &rng) ?? "🐟"
         return nq(subject: .math, skill: "division as sharing", component: "Grouping Buckets", template: "Division as Sharing",
@@ -477,12 +490,15 @@ enum CurriculumGenerator {
     }
 
     private static func genPattern(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        // Numeric pattern at grade2+, shape AB at lower grades.
+        let lvl = max(1, level)
+        // Numeric pattern at grade2+, shape pattern (AB / AAB / ABC) below.
         if band == .grade2 || band == .grade3 {
-            let step = 2 + Int(rng.next() % 5)
+            // Level scaling: bigger step sizes and a longer visible sequence.
+            let step = 2 + Int(rng.next() % UInt64(3 + lvl))
             let start = 1 + Int(rng.next() % 8)
-            let seq = (0..<4).map { start + step * $0 }
-            let next = start + step * 4
+            let terms = lvl >= 3 ? 5 : 4
+            let seq = (0..<terms).map { start + step * $0 }
+            let next = start + step * terms
             let seqText = seq.map(String.init).joined(separator: ", ") + ", __"
             return nq(subject: .math, skill: "pattern recognition", component: "Pattern Row", template: "Pattern Recognition",
                       prompt: "What comes next: \(seqText)?",
@@ -491,21 +507,52 @@ enum CurriculumGenerator {
                       content: ["sequence": seqText],
                       choices: mcChoices(next, around: 3, rng: &rng), correct: String(next), grade: band)
         } else {
+            // Kindergarten / Grade 1: AB by default, with AAB and ABC variants
+            // appearing more often as the level rises (within-grade progression).
             let a = shapeEmojis.randomElement(using: &rng) ?? "🔴"
             let b = shapeEmojis.filter { $0 != a }.randomElement(using: &rng) ?? "🔵"
-            let distract = shapeEmojis.filter { $0 != a && $0 != b }.randomElement(using: &rng) ?? "⭐"
-            let seqText = "\(a), \(b), \(a), \(b), blank"
+            let c = shapeEmojis.filter { $0 != a && $0 != b }.randomElement(using: &rng) ?? "⭐"
+            let distract = shapeEmojis.filter { $0 != a && $0 != b && $0 != c }.randomElement(using: &rng) ?? "🟢"
+            // Roll for complexity: chance of a harder-than-AB pattern grows with level.
+            let hardChance = min(20 + lvl * 15, 75)
+            let roll = Int(rng.next() % 100)
+            let unit: [String]
+            if roll < hardChance {
+                // ABC becomes more likely than AAB at higher levels.
+                if Int(rng.next() % 100) < min(30 + lvl * 10, 70) {
+                    unit = [a, b, c]               // ABC
+                } else {
+                    unit = [a, a, b]               // AAB
+                }
+            } else {
+                unit = [a, b]                      // AB
+            }
+            // Show two full repeats of the unit, then the blank; the answer is the
+            // first element of the unit (what continues the repeat).
+            let shown = unit + unit
+            let correct = unit[0]
+            let seqText = (shown.map { $0 } + ["blank"]).joined(separator: ", ")
+            let promptSeq = shown.joined(separator: " ")
+            // Distractors: the other unit members plus a never-seen shape.
+            var choicePool = Array(Set(unit)).filter { $0 != correct }
+            choicePool.append(distract)
+            var choices = ([correct] + Array(choicePool.prefix(2))).shuffled(using: &rng)
+            if !choices.contains(correct) { choices[0] = correct }
             return nq(subject: .math, skill: "pattern recognition", component: "Pattern Row", template: "Pattern Recognition",
-                      prompt: "What comes next? \(a) \(b) \(a) \(b) __",
+                      prompt: "What comes next? \(promptSeq) __",
                       directions: "Choose the missing piece.",
                       source: "shape_pack",
                       content: ["sequence": seqText],
-                      choices: [a, b, distract].shuffled(using: &rng), correct: a, grade: band)
+                      choices: choices, correct: correct, grade: band)
         }
     }
 
     private static func genFraction(level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        let parts = [2, 3, 4, 6, 8].randomElement(using: &rng) ?? 4
+        // Level scaling: more parts (finer fractions) at higher levels.
+        // level<=1 → [2,3,4]; level==2 → [2,3,4,6]; level>=3 → [3,4,6,8].
+        let lvl = max(1, level)
+        let partPool: [Int] = lvl <= 1 ? [2, 3, 4] : lvl == 2 ? [2, 3, 4, 6] : [3, 4, 6, 8]
+        let parts = partPool.randomElement(using: &rng) ?? 4
         let filled = 1 + Int(rng.next() % UInt64(parts - 1))
         let correct = "\(filled)/\(parts)"
         var distractors: [String] = []
@@ -523,12 +570,19 @@ enum CurriculumGenerator {
 
     private static func genTime(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
         let hour = 1 + Int(rng.next() % 12)
-        let minute: Int
+        // Level scaling: finer minute increments at higher levels. The band sets a
+        // floor; level can refine it further (0 → half-hour → quarter-hour).
+        let lvl = max(1, level)
+        let levelMinutes: [Int] = lvl <= 1 ? [0] : lvl == 2 ? [0, 30] : [0, 15, 30, 45]
+        let bandMinutes: [Int]
         switch band {
-        case .kindergarten, .grade1: minute = 0
-        case .grade2: minute = Int(rng.next() % 2) == 0 ? 0 : 30
-        case .grade3: minute = [0, 15, 30, 45].randomElement(using: &rng) ?? 0
+        case .kindergarten, .grade1: bandMinutes = [0]
+        case .grade2: bandMinutes = [0, 30]
+        case .grade3: bandMinutes = [0, 15, 30, 45]
         }
+        // Use whichever band/level allows the finer set.
+        let minutePool = levelMinutes.count >= bandMinutes.count ? levelMinutes : bandMinutes
+        let minute = minutePool.randomElement(using: &rng) ?? 0
         let correct = String(format: "%d:%02d", hour, minute)
         let altHour1 = hour == 12 ? 1 : hour + 1
         let altHour2 = hour == 1 ? 12 : hour - 1
@@ -676,8 +730,21 @@ enum CurriculumGenerator {
          ("cloud", "☁️"), ("moon", "🌙")]
     ]
 
+    /// Picture clues whose word clearly starts with the paired letter. Used so a
+    /// letter-recognition question shows an emoji and asks which letter it starts
+    /// with — the target letter is never named in the prompt.
+    private static let letterPicturePool: [(String, String)] = [
+        ("A", "🍎"), ("B", "🐻"), ("C", "🐱"), ("D", "🐶"), ("E", "🥚"),
+        ("F", "🐸"), ("G", "🐐"), ("H", "🎩"), ("L", "🦁"), ("M", "🐵"),
+        ("O", "🐙"), ("P", "🐷"), ("R", "🐰"), ("S", "🐍"), ("T", "🐢"),
+        ("U", "☂️"), ("V", "🎻"), ("W", "🐺"), ("Z", "🦓")
+    ]
+
     private static func genLetter(rng: inout SeededRNG) -> NormalizedQuestion {
-        let target = letters.randomElement(using: &rng) ?? "M"
+        // Show a picture and ask which letter its word starts with — the answer
+        // letter is never written in the prompt.
+        let pick = letterPicturePool.randomElement(using: &rng) ?? ("M", "🐵")
+        let target = pick.0
         // Prefer look-alike distractors so the child must visually discriminate.
         let distractors: [String]
         if let confusable = upperConfusables[target] {
@@ -688,10 +755,10 @@ enum CurriculumGenerator {
         var choices = ([target] + distractors).shuffled(using: &rng)
         if !choices.contains(target) { choices[0] = target }
         return nq(subject: .english, skill: "letter recognition", component: "Letter Tile", template: "Letter Recognition",
-                  prompt: "Find the letter \(target)",
-                  directions: "Tap the letter \(target).",
+                  prompt: "Which letter does \(pick.1) start with?",
+                  directions: "Tap the first letter of the picture.",
                   source: "letter_pack",
-                  content: ["target": target],
+                  content: ["target": target, "emoji": pick.1],
                   choices: choices, correct: target, grade: .kindergarten)
     }
 
@@ -709,7 +776,7 @@ enum CurriculumGenerator {
         if !choices.contains(lower) { choices[0] = lower }
         return nq(subject: .english, skill: "uppercase-lowercase", component: "Matching Card Set", template: "Uppercase-Lowercase Matching",
                   prompt: "Match \(upper) to its lowercase letter.",
-                  directions: "Tap the lowercase \(lower).",
+                  directions: "Tap its matching lowercase letter.",
                   source: "letter_pack",
                   content: ["uppercase": upper],
                   choices: choices, correct: lower, grade: .kindergarten)
@@ -748,7 +815,7 @@ enum CurriculumGenerator {
         if !choices.contains(missing) { choices[0] = missing }
         return nq(subject: .english, skill: "missing letter", component: "Blank Slot Builder", template: "Missing Letter",
                   prompt: promptShown,
-                  directions: "Choose the missing letter to make \(word).",
+                  directions: "Use the picture to choose the missing letter.",
                   source: "cvc_pack",
                   content: ["wordWithBlank": displayed, "emoji": emoji],
                   choices: choices, correct: missing, grade: .kindergarten)
@@ -840,6 +907,24 @@ enum CurriculumGenerator {
                   choices: choices, correct: pick.1, grade: band)
     }
 
+    /// Sentence frames with a blank so the sight word is found by context, not by
+    /// matching identical text. The blank is shown as "___".
+    private static let sightWordSentences: [String: String] = [
+        "the": "I see ___ dog.", "and": "I have a cat ___ a dog.", "is": "The sun ___ hot.",
+        "you": "How are ___ today?", "to": "I want ___ play.", "see": "I can ___ the bird.",
+        "we": "Today ___ will have fun.", "go": "Let's ___ to the park.",
+        "was": "The puppy ___ happy.", "are": "We ___ best friends.", "have": "I ___ two apples.",
+        "they": "Look, ___ are playing.", "with": "Come ___ me.", "from": "This gift is ___ Grandma.",
+        "this": "I like ___ book.", "that": "Look at ___ bird.",
+        "because": "I smiled ___ I was happy.", "people": "Many ___ live here.",
+        "their": "The kids found ___ shoes.", "would": "___ you like a snack?",
+        "could": "She ___ run very fast.", "should": "We ___ share our toys.",
+        "about": "Tell me ___ your day.", "around": "We walked ___ the lake.",
+        "thought": "I ___ about the story.", "through": "We walked ___ the door.",
+        "different": "These shoes are ___ colors.", "another": "May I have ___ cookie?",
+        "important": "It is ___ to be kind.", "together": "We can play ___."
+    ]
+
     private static func genSightWord(band: GradeBand, rng: inout SeededRNG) -> NormalizedQuestion {
         let pool: [String]
         switch band {
@@ -858,11 +943,12 @@ enum CurriculumGenerator {
         }
         var choices = ([target] + distractors).shuffled(using: &rng)
         if !choices.contains(target) { choices[0] = target }
+        let sentence = sightWordSentences[target] ?? "I can read the word ___."
         return nq(subject: .english, skill: "sight words", component: "Choice Card Row", template: "Sight Word Recognition",
-                  prompt: "Which word is \"\(target)\"?",
-                  directions: "Tap the word that matches.",
+                  prompt: sentence,
+                  directions: "Tap the word that completes the sentence.",
                   source: "sight_words_pack",
-                  content: ["target": target],
+                  content: ["target": target, "sentence": sentence],
                   choices: choices, correct: target, grade: band)
     }
 

@@ -192,13 +192,19 @@ struct QuestionRenderer: View {
             NumberLineCard(start: int(content["start"]), jump: signedInt(content["jump"]), selected: selectedAnswer, locked: isLocked) { selectedAnswer = $0 }
 
         case "make_ten":
-            TenFrameCard(filled: int(content["filled"]), hint: feedback == .incorrect)
+            // Tappable ten-frame: the pre-filled dots are fixed; tapping the empty
+            // slots fills them. Filling exactly the right number answers it.
+            TenFrameCard(filled: int(content["filled"]), need: int(content["empty"]), locked: isLocked) { selectedAnswer = $0 }
 
         case "multiplication_arrays":
+            // Build-the-array: tap + to add rows/columns up to the target, then
+            // confirm the count with the choices below.
             ArrayBuilderCard(rows: int(content["rows"]), columns: int(content["columns"]), item: content["item"] ?? "●")
 
         case "division_as_sharing":
-            GroupingBucketsCard(total: totalObjects(content["objects"]), buckets: int(content["buckets"]), item: objectEmoji(content["objects"]))
+            // Tap-to-distribute: each tap sends one item round-robin into a bucket
+            // until all are shared evenly, which answers the question.
+            DivisionShareCard(total: totalObjects(content["objects"]), buckets: int(content["buckets"]), item: objectEmoji(content["objects"]), locked: isLocked) { selectedAnswer = $0 }
 
         case "pattern_recognition":
             PatternRowCard(sequence: visualSequence)
@@ -210,7 +216,14 @@ struct QuestionRenderer: View {
             ClockCard(hour: int(content["hour"]), minute: int(content["minute"]))
 
         case "letter_recognition":
-            visualTapGrid(items: choices, style: .letter)
+            // Show a picture and tap the letter its word starts with (no letter is
+            // named in the prompt). The emoji carries the clue.
+            VStack(spacing: 18) {
+                if let emoji = content["emoji"], !emoji.isEmpty {
+                    Text(emoji).font(.system(size: 80))
+                }
+                visualTapGrid(items: choices, style: .letter)
+            }
 
         case "uppercase_lowercase_matching":
             MatchingCardSet(left: content["uppercase"] ?? "B", right: choices, selected: selectedAnswer, locked: isLocked, fadedChoice: hintFadedChoice) { selectedAnswer = $0 }
@@ -227,8 +240,42 @@ struct QuestionRenderer: View {
                 fadedChoice: hintFadedChoice
             ) { selectedAnswer = $0 }
 
-        case "choose_correct_spelling", "sight_word_recognition", "punctuation_choice", "rhyming_words", "word_families", "vocabulary_matching":
+        case "choose_correct_spelling", "sight_word_recognition", "vocabulary_matching":
             visualTapGrid(items: choices, style: englishChoiceStyle)
+
+        case "rhyming_words", "word_families":
+            // Once the hint is revealed, the shared ending letters are highlighted
+            // across the choices to reinforce the sound pattern.
+            RhymeFamilyGrid(
+                choices: choices,
+                rime: sharedRime,
+                selected: selectedAnswer,
+                locked: isLocked,
+                fadedChoice: hintFadedChoice,
+                revealed: hintRevealed
+            ) { selectedAnswer = $0 }
+
+        case "punctuation_choice":
+            // A mascot face reacts to the punctuation being considered (curious for
+            // ?, excited for !, neutral for .) to reinforce sentence tone.
+            PunctuationCard(
+                sentence: content["sentence"] ?? question.prompt,
+                choices: choices,
+                selected: selectedAnswer,
+                locked: isLocked,
+                fadedChoice: hintFadedChoice
+            ) { selectedAnswer = $0 }
+
+        case "true_or_false_math_statement":
+            // Concrete emoji groups visualize the equation so the child can verify
+            // it visually instead of only reading an abstract statement.
+            TrueFalseMathCard(
+                statement: content["statement"] ?? question.prompt,
+                choices: choices,
+                selected: selectedAnswer,
+                locked: isLocked,
+                fadedChoice: hintFadedChoice
+            ) { selectedAnswer = $0 }
 
         case "missing_letter", "fill_missing_letters":
             // Tapping a choice fills the blank box and highlights the selection.
@@ -254,8 +301,15 @@ struct QuestionRenderer: View {
         case "sentence_building":
             sentenceBuildCard(tokens: tokenValues)
 
-        case "grammar_sorting":
-            GrammarBucketsCard(word: content["word"] ?? question.prompt, buckets: choices, selected: selectedAnswer, locked: isLocked) { selectedAnswer = $0 }
+        case "grammar_sorting", "category_match":
+            // Consolidated into the multi-item drag-to-bucket interaction so even a
+            // single word/picture is sorted the same way as category_sort.
+            SortBucketsCard(
+                buckets: choices,
+                items: [(label: content["word"] ?? content["item"] ?? question.prompt, bucket: correctValue ?? "")],
+                correct: correctValue ?? "sorted",
+                locked: isLocked
+            ) { selectedAnswer = $0 }
 
         case "reading_comprehension":
             StoryEmojiStrip(emojis: (content["emojis"] ?? "").replacingOccurrences(of: ",", with: " "), text: content["text"] ?? question.prompt)
@@ -453,12 +507,29 @@ struct QuestionRenderer: View {
         // generic multiple-choice question handled by the `default` interactive
         // case — for those, rendering the choices here too would duplicate them and
         // produce the 2x2 grid of repeated options.
+        // make_ten and division_as_sharing are now self-answering interactions
+        // (filling the frame / distributing the items reports the answer), so they
+        // no longer render a separate choice row.
         let visualWithSeparateChoices: Set<String> = [
             "counting_objects", "addition_by_counting", "subtraction_by_taking_away",
-            "make_ten", "multiplication_arrays", "division_as_sharing",
+            "multiplication_arrays",
             "pattern_recognition", "fractions", "telling_time", "reading_comprehension"
         ]
         return visualWithSeparateChoices.contains(template) && choices.count > 1
+    }
+
+    /// True when the universal hint has been revealed for this question.
+    private var hintRevealed: Bool { hint.active && hint.revealed }
+
+    /// The shared ending sound (rime) highlighted on hint for rhyming / word
+    /// families. Derived from the family tag ("-at" → "at") or the target word's
+    /// last two letters.
+    private var sharedRime: String {
+        if let family = content["family"]?.replacingOccurrences(of: "-", with: ""), !family.isEmpty {
+            return family.lowercased()
+        }
+        let target = (content["target"] ?? "").lowercased()
+        return target.count >= 2 ? String(target.suffix(2)) : target
     }
 
     private var englishChoiceStyle: ChoiceStyle { template == "letter_recognition" ? .letter : .word }
@@ -731,133 +802,317 @@ struct NumberLineCard: View {
     let locked: Bool
     let action: (String) -> Void
 
+    private let count = 13   // ticks 0...12
+
+    /// The marker sits at `start` until the child picks a landing tick, then hops
+    /// there. Defaults to start when nothing is selected.
+    private var markerValue: Int { Int(selected ?? "") ?? start }
+
     var body: some View {
         VStack(spacing: 14) {
-            HStack(spacing: 0) {
-                ForEach(0...12, id: \.self) { n in
-                    Button {
-                        action("\(n)")
-                    } label: {
-                        VStack(spacing: 6) {
-                            Circle()
-                                .fill(selected == "\(n)" ? DS.Color.accent : (n == start ? DS.Color.accentSoft : DS.Color.border))
-                                .frame(width: selected == "\(n)" ? 20 : 10, height: selected == "\(n)" ? 20 : 10)
-                            Text("\(n)")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundStyle(DS.Color.textPrimary)
-                        }
-                        .frame(maxWidth: .infinity)
+            GeometryReader { geo in
+                let cellW = geo.size.width / CGFloat(count)
+                ZStack(alignment: .topLeading) {
+                    // Hopping marker above the line.
+                    Text("🐸")
+                        .font(.system(size: 24))
+                        .frame(width: cellW)
+                        .offset(x: CGFloat(markerValue) * cellW, y: 0)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.45), value: markerValue)
+
+                    HStack(spacing: 0) {
+                        ForEach(0...12, id: \.self) { n in tick(n, cellW: cellW) }
                     }
-                    .buttonStyle(.plain)
-                    .disabled(locked)
-                    .scaleEffect(selected == "\(n)" ? 1.15 : 1)
-                    .animation(.spring(duration: 0.2), value: selected)
+                    .offset(y: 30)
                 }
             }
+            .frame(height: 78)
+
             Text("Start at \(start)  →  jump \(jump >= 0 ? "+" : "")\(jump)")
                 .font(.system(size: 20, weight: .heavy, design: .rounded))
                 .foregroundStyle(DS.Color.accent)
         }
     }
-}
 
-struct TenFrameCard: View {
-    let filled: Int
-    let hint: Bool
-
-    var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.fixed(44)), count: 5), spacing: 8) {
-            ForEach(0..<10, id: \.self) { i in
+    private func tick(_ n: Int, cellW: CGFloat) -> some View {
+        Button {
+            action("\(n)")
+        } label: {
+            VStack(spacing: 6) {
                 Circle()
-                    .fill(i < filled ? DS.Color.accent : DS.Color.accentSoft)
-                    .frame(width: 42, height: 42)
-                    .overlay(
-                        Circle()
-                            .stroke(
-                                DS.Color.accent.opacity(i >= filled && hint ? 0.8 : 0.15),
-                                lineWidth: 2
-                            )
-                    )
+                    .fill(selected == "\(n)" ? DS.Color.accent : (n == start ? DS.Color.accentSoft : DS.Color.border))
+                    .frame(width: selected == "\(n)" ? 20 : 10, height: selected == "\(n)" ? 20 : 10)
+                Text("\(n)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.Color.textPrimary)
             }
+            .frame(width: cellW)
         }
+        .buttonStyle(.plain)
+        .disabled(locked)
+        .scaleEffect(selected == "\(n)" ? 1.15 : 1)
+        .animation(.spring(duration: 0.2), value: selected)
     }
 }
 
+/// Interactive ten-frame: the first `filled` dots are fixed; the child taps the
+/// empty slots to add dots. Filling the right number to reach ten answers it.
+struct TenFrameCard: View {
+    let filled: Int
+    let need: Int
+    let locked: Bool
+    let report: (String?) -> Void
+
+    @State private var added: Set<Int> = []
+
+    var body: some View {
+        VStack(spacing: 14) {
+            LazyVGrid(columns: Array(repeating: GridItem(.fixed(44), spacing: 8), count: 5), spacing: 8) {
+                ForEach(0..<10, id: \.self) { i in slot(i) }
+            }
+            Text("Tap the empty dots to make 10")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(DS.Color.textSecondary)
+        }
+    }
+
+    private func slot(_ i: Int) -> some View {
+        let isPrefilled = i < filled
+        let isAdded = added.contains(i)
+        let isFilled = isPrefilled || isAdded
+        return Button {
+            guard !locked, !isPrefilled else { return }
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+                if isAdded { added.remove(i) } else { added.insert(i) }
+            }
+            report(added.isEmpty ? nil : String(added.count))
+        } label: {
+            Circle()
+                .fill(isFilled ? DS.Color.accent : DS.Color.accentSoft)
+                .frame(width: 42, height: 42)
+                .overlay(
+                    Circle().stroke(
+                        DS.Color.accent.opacity(isPrefilled ? 0.15 : (isAdded ? 0 : 0.55)),
+                        lineWidth: 2
+                    )
+                )
+                .scaleEffect(isAdded ? 1.08 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .disabled(locked || isPrefilled)
+    }
+}
+
+/// Build-the-array: the child taps + / − to add rows and columns up to the
+/// target dimensions, watching the product grow, before confirming the count.
 struct ArrayBuilderCard: View {
     let rows: Int
     let columns: Int
     let item: String
 
-    private var rowCount: Int { max(rows, 1) }
-    private var columnCount: Int { max(columns, 1) }
+    @State private var builtRows: Int = 1
+    @State private var builtCols: Int = 1
 
-    /// The full array must always be visible — the child is counting it. Instead
-    /// of capping rows, the dot size and spacing shrink as the grid grows so even
-    /// large arrays fit on screen without truncation.
+    private var targetRows: Int { max(rows, 1) }
+    private var targetCols: Int { max(columns, 1) }
+    private var isComplete: Bool { builtRows == targetRows && builtCols == targetCols }
+
+    /// Dot size is fixed to the TARGET dimensions so the grid doesn't jump while
+    /// the child builds it up.
     private var itemSize: CGFloat {
-        switch max(rowCount, columnCount) {
+        switch max(targetRows, targetCols) {
         case 0...4: return 30
         case 5...6: return 24
         case 7...8: return 19
-        case 9...10: return 15
-        default: return 12
+        default: return 15
         }
     }
-
-    private var gridSpacing: CGFloat { max(rowCount, columnCount) >= 7 ? 5 : 8 }
+    private var gridSpacing: CGFloat { max(targetRows, targetCols) >= 7 ? 5 : 8 }
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 14) {
             VStack(spacing: gridSpacing) {
-                ForEach(0..<rowCount, id: \.self) { _ in
+                ForEach(0..<builtRows, id: \.self) { _ in
                     HStack(spacing: gridSpacing) {
-                        ForEach(0..<columnCount, id: \.self) { _ in
-                            Text(item)
-                                .font(.system(size: itemSize))
+                        ForEach(0..<builtCols, id: \.self) { _ in
+                            Text(item).font(.system(size: itemSize))
+                                .transition(.scale.combined(with: .opacity))
                         }
                     }
                 }
             }
-            Text("\(rowCount) rows × \(columnCount) columns = ?")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(DS.Color.textSecondary)
-                .padding(.top, 4)
+            .frame(minHeight: itemSize + 8)
+
+            HStack(spacing: 14) {
+                stepper(label: "Rows", value: builtRows, target: targetRows) { builtRows = $0 }
+                stepper(label: "Columns", value: builtCols, target: targetCols) { builtCols = $0 }
+            }
+
+            Text("\(builtRows) × \(builtCols) = \(builtRows * builtCols)")
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
+                .foregroundStyle(isComplete ? DS.Color.accent : DS.Color.textSecondary)
+                .padding(.top, 2)
         }
+    }
+
+    private func stepper(label: String, value: Int, target: Int, set: @escaping (Int) -> Void) -> some View {
+        VStack(spacing: 6) {
+            Text(label)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(DS.Color.textSecondary)
+            HStack(spacing: 10) {
+                stepButton("minus") { if value > 1 { withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) { set(value - 1) } } }
+                Text("\(value)")
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DS.Color.textPrimary)
+                    .frame(minWidth: 24)
+                stepButton("plus") { if value < target { withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) { set(value + 1) } } }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+        .clipShape(.rect(cornerRadius: 16))
+        .shadow(color: DS.Color.accent.opacity(0.12), radius: 6, y: 2)
+    }
+
+    private func stepButton(_ system: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: system)
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundStyle(.white)
+                .frame(width: 30, height: 30)
+                .background(DS.Color.accent)
+                .clipShape(.circle)
+        }
+        .buttonStyle(.plain)
     }
 }
 
-struct GroupingBucketsCard: View {
+/// Tap-to-distribute division: tap items in the tray to send them one at a time,
+/// round-robin, into the bowls until every item is shared evenly. Completing an
+/// even distribution reports the per-bowl count as the answer.
+struct DivisionShareCard: View {
     let total: Int
     let buckets: Int
     let item: String
+    let locked: Bool
+    let report: (String?) -> Void
+
+    @State private var placed: [Int] = []
+    @State private var remaining: Int = -1   // -1 = not yet initialized
+
+    private var bucketCount: Int { max(buckets, 1) }
+    private var perGroup: Int { total / bucketCount }
+    private var nextBucket: Int { (total - remaining) % bucketCount }
 
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(0..<max(buckets, 1), id: \.self) { _ in
-                VStack(spacing: 6) {
-                    Text("🥣")
-                        .font(.system(size: 36))
-                    Text(String(repeating: item, count: max(total / max(buckets, 1), 1)))
-                        .font(.system(size: 20))
+        VStack(spacing: 16) {
+            if remaining > 0 {
+                VStack(spacing: 8) {
+                    Text("Tap an item to share it — \(remaining) left")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.Color.accent)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 8)], spacing: 8) {
+                        ForEach(0..<max(remaining, 0), id: \.self) { _ in
+                            Button { shareOne() } label: {
+                                Text(item)
+                                    .font(.system(size: 30))
+                                    .frame(width: 44, height: 44)
+                                    .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+                                    .clipShape(.circle)
+                                    .shadow(color: DS.Color.accent.opacity(0.18), radius: 4, y: 1)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(locked)
+                        }
+                    }
                 }
-                .frame(maxWidth: .infinity)
-                .padding(10)
-                .background(Color(red: 0.996, green: 0.994, blue: 0.992))
-                .clipShape(.rect(cornerRadius: 16))
-                .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
+            } else if remaining == 0 {
+                Text("All shared evenly! Tap Check.")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.Color.accent)
+            }
+
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(0..<bucketCount, id: \.self) { b in bowl(b) }
             }
         }
+        .onAppear {
+            guard remaining == -1 else { return }
+            placed = Array(repeating: 0, count: bucketCount)
+            remaining = total
+        }
+    }
+
+    private func bowl(_ b: Int) -> some View {
+        let count = b < placed.count ? placed[b] : 0
+        let isNext = remaining > 0 && b == nextBucket
+        return VStack(spacing: 6) {
+            Text("🥣").font(.system(size: 34))
+            Text(String(repeating: item, count: count))
+                .font(.system(size: 18))
+                .multilineTextAlignment(.center)
+                .frame(minHeight: 24)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(10)
+        .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(isNext ? DS.Color.accent : Color.clear, style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
+        )
+        .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
+    }
+
+    private func shareOne() {
+        guard !locked, remaining > 0 else { return }
+        let target = nextBucket
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            if target < placed.count { placed[target] += 1 }
+            remaining -= 1
+        }
+        report(currentAnswer())
+    }
+
+    /// nil until everything is placed; then the per-bowl count when the split is
+    /// even (always, via round-robin), else a sentinel that will be marked wrong.
+    private func currentAnswer() -> String? {
+        guard remaining == 0 else { return nil }
+        let even = placed.allSatisfy { $0 == placed.first }
+        return even ? String(perGroup) : "__unsorted__"
     }
 }
 
+/// Each element of the pattern fades/scales in one at a time before the blank is
+/// revealed, so the child watches the sequence build rather than seeing it all
+/// at once.
 struct PatternRowCard: View {
     let sequence: String
+    @State private var shown: Int = 0
+
+    private var tokens: [String] { sequence.split(separator: " ").map(String.init).filter { !$0.isEmpty } }
 
     var body: some View {
-        Text(sequence)
-            .font(.system(size: 30, weight: .heavy, design: .rounded))
-            .foregroundStyle(DS.Color.textPrimary)
-            .multilineTextAlignment(.center)
+        HStack(spacing: 10) {
+            ForEach(Array(tokens.enumerated()), id: \.offset) { i, tok in
+                Text(tok)
+                    .font(.system(size: 30, weight: .heavy, design: .rounded))
+                    .foregroundStyle(tok == "__" ? DS.Color.accent : DS.Color.textPrimary)
+                    .opacity(i < shown ? 1 : 0)
+                    .scaleEffect(i < shown ? 1 : 0.4)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .onAppear {
+            shown = 0
+            for i in 0..<tokens.count {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.18 * Double(i)) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) { shown = i + 1 }
+                }
+            }
+        }
     }
 }
 
@@ -882,9 +1137,17 @@ struct FractionBarCard: View {
     }
 }
 
+/// The hour hand swings into place first, then the minute hand, giving a brief
+/// animated reveal that reinforces reading order (hour, then minute).
 struct ClockCard: View {
     let hour: Int
     let minute: Int
+
+    @State private var hourAngle: Double = 0
+    @State private var minuteAngle: Double = 0
+
+    private var targetHour: Double { Double(hour % 12) * 30 + Double(minute) / 60 * 30 }
+    private var targetMinute: Double { Double(minute) * 6 }
 
     var body: some View {
         ZStack {
@@ -907,17 +1170,25 @@ struct ClockCard: View {
                 .fill(DS.Color.textPrimary)
                 .frame(width: 5, height: 42)
                 .offset(y: -21)
-                .rotationEffect(.degrees(Double(hour % 12) * 30))
+                .rotationEffect(.degrees(hourAngle))
 
             Rectangle()
                 .fill(DS.Color.accent)
                 .frame(width: 4, height: 54)
                 .offset(y: -27)
-                .rotationEffect(.degrees(Double(minute) * 6))
+                .rotationEffect(.degrees(minuteAngle))
 
             Circle()
                 .fill(DS.Color.accent)
                 .frame(width: 12, height: 12)
+        }
+        .onAppear {
+            hourAngle = 0
+            minuteAngle = 0
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) { hourAngle = targetHour }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) { minuteAngle = targetMinute }
+            }
         }
     }
 }
@@ -1180,24 +1451,168 @@ struct UnscrambleCard: View {
     }
 }
 
-struct GrammarBucketsCard: View {
-    let word: String
-    let buckets: [String]
+// MARK: - True or False Math Statement (concrete emoji visual)
+
+/// Shows the equation as concrete emoji groups (e.g. 6 + 2 = 9) so the child can
+/// verify the statement visually before judging True or False.
+struct TrueFalseMathCard: View {
+    let statement: String        // e.g. "6 + 2 = 9"
+    let choices: [String]
     let selected: String?
     let locked: Bool
-    let action: (String) -> Void
+    var fadedChoice: String? = nil
+    let onSelect: (String) -> Void
+
+    private let dot = "🔵"
+
+    private var parsed: (a: Int, op: String, b: Int, c: Int)? {
+        let parts = statement.split(separator: " ").map(String.init)
+        guard parts.count == 5, parts[3] == "=",
+              let a = Int(parts[0]), let b = Int(parts[2]), let c = Int(parts[4]) else { return nil }
+        return (a, parts[1], b, c)
+    }
 
     var body: some View {
-        VStack(spacing: 14) {
-            Text(word)
-                .font(.system(size: 36, weight: .heavy, design: .rounded))
-                .padding(.horizontal, 24)
-                .padding(.vertical, 10)
-                .background(Color(red: 0.996, green: 0.994, blue: 0.992))
-                .clipShape(.capsule)
-                .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
+        VStack(spacing: 18) {
+            if let p = parsed {
+                VStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        emojiGroup(p.a)
+                        Text(p.op).font(.system(size: 28, weight: .heavy, design: .rounded)).foregroundStyle(DS.Color.accent)
+                        emojiGroup(p.b)
+                    }
+                    Text("=").font(.system(size: 24, weight: .heavy, design: .rounded)).foregroundStyle(DS.Color.textSecondary)
+                    emojiGroup(p.c)
+                }
+                Text(statement)
+                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DS.Color.textPrimary)
+            } else {
+                Text(statement)
+                    .font(.system(size: 26, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DS.Color.textPrimary)
+            }
 
-            FlowRow(items: buckets, selected: selected, locked: locked, action: action)
+            FlowRow(items: choices, selected: selected, locked: locked, fadedChoice: fadedChoice, action: onSelect)
+                .environment(\.choiceStyle, .word)
+        }
+    }
+
+    private func emojiGroup(_ n: Int) -> some View {
+        let cols = min(max(n, 1), 5)
+        return LazyVGrid(columns: Array(repeating: GridItem(.fixed(26), spacing: 4), count: cols), spacing: 4) {
+            ForEach(0..<max(n, 0), id: \.self) { _ in
+                Text(dot).font(.system(size: 22))
+            }
+        }
+        .fixedSize()
+        .padding(8)
+        .background(DS.Color.accentSoft.opacity(0.4))
+        .clipShape(.rect(cornerRadius: 12))
+    }
+}
+
+// MARK: - Rhyme / Word Family Grid (shared-ending highlight on hint)
+
+/// Choice grid for rhyming and word families. When the hint is revealed, the
+/// shared ending letters (rime) are colored and underlined across the choices
+/// that share them, reinforcing the sound pattern.
+struct RhymeFamilyGrid: View {
+    let choices: [String]
+    let rime: String
+    let selected: String?
+    let locked: Bool
+    var fadedChoice: String? = nil
+    let revealed: Bool
+    let onSelect: (String) -> Void
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 12)], spacing: 12) {
+            ForEach(choices, id: \.self) { choice in button(choice) }
+        }
+    }
+
+    private func highlights(_ word: String) -> Bool {
+        revealed && !rime.isEmpty && word.lowercased().hasSuffix(rime) && word.count > rime.count
+    }
+
+    private func styled(_ word: String) -> Text {
+        guard highlights(word) else {
+            return Text(word).foregroundColor(DS.Color.textPrimary)
+        }
+        let splitIndex = word.index(word.endIndex, offsetBy: -rime.count)
+        let head = String(word[..<splitIndex])
+        let tail = String(word[splitIndex...])
+        return Text(head).foregroundColor(DS.Color.textPrimary)
+            + Text(tail).foregroundColor(DS.Color.accent).underline()
+    }
+
+    private func button(_ choice: String) -> some View {
+        let isSelected = selected == choice
+        return Button {
+            guard !locked else { return }
+            withAnimation(.spring(duration: 0.2)) { onSelect(choice) }
+        } label: {
+            styled(choice)
+                .font(.system(size: 22, weight: .heavy, design: .rounded))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, minHeight: 66)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+                .clipShape(.rect(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(isSelected ? DS.Color.accent : Color.clear, lineWidth: isSelected ? 2.5 : 0)
+                )
+                .shadow(
+                    color: isSelected ? DS.Color.accent.opacity(0.55) : DS.Color.accent.opacity(0.28),
+                    radius: isSelected ? 16 : 11, x: 0, y: isSelected ? 5 : 3
+                )
+        }
+        .buttonStyle(.plain)
+        .opacity(fadedChoice == choice ? 0.28 : 1)
+        .scaleEffect(isSelected ? 1.08 : 1.0)
+        .animation(.spring(response: 0.22, dampingFraction: 0.45), value: selected)
+        .animation(.easeInOut(duration: 0.3), value: fadedChoice)
+        .animation(.easeInOut(duration: 0.3), value: revealed)
+    }
+}
+
+// MARK: - Punctuation Choice (reacting mascot)
+
+/// A mascot face reacts to the punctuation being considered — curious for "?",
+/// excited for "!", calm for "." — reinforcing sentence tone over rote symbols.
+struct PunctuationCard: View {
+    let sentence: String
+    let choices: [String]
+    let selected: String?
+    let locked: Bool
+    var fadedChoice: String? = nil
+    let onSelect: (String) -> Void
+
+    private func face(for punct: String?) -> String {
+        switch punct {
+        case "?": return "🤔"
+        case "!": return "😃"
+        case ".": return "🙂"
+        default: return "😐"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text(face(for: selected))
+                .font(.system(size: 64))
+                .scaleEffect(selected == nil ? 1.0 : 1.1)
+                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: selected)
+
+            Text(sentence + (selected ?? " __"))
+                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .foregroundStyle(DS.Color.textPrimary)
+                .multilineTextAlignment(.center)
+
+            FlowRow(items: choices, selected: selected, locked: locked, fadedChoice: fadedChoice, action: onSelect)
                 .environment(\.choiceStyle, .word)
         }
     }

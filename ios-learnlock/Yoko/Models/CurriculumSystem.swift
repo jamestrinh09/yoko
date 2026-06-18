@@ -635,16 +635,16 @@ nonisolated enum CurriculumSystem {
 
         // 0 — Kindergarten: Letter Recognition (M, close distractors)
         q(.english, "letter_M", "letter recognition", "Letter Tile", "Letter Recognition",
-          "Find the letter M",
-          "Tap the letter M.",
+          "Which letter does 🐵 start with?",
+          "Tap the first letter of the picture.",
           "letter_pack",
-          ["target":"M"],
+          ["target":"M", "emoji":"🐵"],
           ["M","N","W"], "M", .kindergarten),
 
         // 1 — Kindergarten: Uppercase–Lowercase (B → b)
         q(.english, "upper_lower_B", "uppercase-lowercase", "Matching Card Set", "Uppercase-Lowercase Matching",
           "Match B to its lowercase letter.",
-          "Tap the lowercase b.",
+          "Tap its matching lowercase letter.",
           "letter_pack",
           ["uppercase":"B"],
           ["b","d","p"], "b", .kindergarten),
@@ -660,7 +660,7 @@ nonisolated enum CurriculumSystem {
         // 3 — Kindergarten: Missing Letter (c_t → cat, emoji hint 🐱)
         q(.english, "missing_letter_cat", "missing letter", "Blank Slot Builder", "Missing Letter",
           "c _ t",
-          "Choose the missing letter to make cat.",
+          "Use the picture to choose the missing letter.",
           "cvc_pack",
           ["wordWithBlank":"c_t", "emoji":"🐱"],
           ["a","o","i"], "a", .kindergarten),
@@ -676,7 +676,7 @@ nonisolated enum CurriculumSystem {
         // 5 — Grade 2: Fill Missing Letters (b__k → book, emoji 📚)
         q(.english, "fill_letters_book", "fill missing letters", "Blank Slot Builder", "Fill Missing Letters",
           "b _ _ k",
-          "Fill the missing letters to make book.",
+          "Use the picture to fill the missing letters.",
           "common_school_words_pack",
           ["wordWithBlanks":"b__k", "emoji":"📚"],
           ["oo","oa","ee"], "oo", .grade2),
@@ -723,10 +723,10 @@ nonisolated enum CurriculumSystem {
 
         // 11 — Kindergarten: Sight Word (the)
         q(.english, "sight_the", "sight words", "Choice Card Row", "Sight Word Recognition",
-          "Which word is \"the\"?",
-          "Tap the word that matches.",
+          "I see ___ dog.",
+          "Tap the word that completes the sentence.",
           "sight_words_pack",
-          ["target":"the"],
+          ["target":"the", "sentence":"I see ___ dog."],
           ["the","then","them"], "the", .kindergarten),
 
         // 12 — Grade 2: Grammar Sorting (jump → Verb)
@@ -813,10 +813,10 @@ nonisolated enum CurriculumSystem {
         // NOTE: word choices render as chips in FlowRow (minWidth 96). Keep word
         // choices under ~8 characters to avoid wrapping across two lines.
         q(.english, "sight_because", "sight words", "Choice Card Row", "Sight Word Recognition",
-          "Which word is \"because\"?",
-          "Tap the word that matches.",
+          "I smiled ___ I was happy.",
+          "Tap the word that completes the sentence.",
           "sight_words_pack",
-          ["target":"because"],
+          ["target":"because", "sentence":"I smiled ___ I was happy."],
           ["because","before","became"], "because", .grade2),
 
         // 23 — Grade 3: Reading Comprehension (two-sentence passage)
@@ -830,7 +830,7 @@ nonisolated enum CurriculumSystem {
         // 24 — Grade 1: Missing Letter (sh_p → ship, emoji 🚢)
         q(.english, "missing_letter_ship", "missing letter", "Blank Slot Builder", "Missing Letter",
           "sh _ p",
-          "Choose the missing letter to make ship.",
+          "Use the picture to choose the missing letter.",
           "cvc_pack",
           ["wordWithBlank":"sh_p", "emoji":"🚢"],
           ["i","a","u"], "i", .grade1),
@@ -838,7 +838,7 @@ nonisolated enum CurriculumSystem {
         // 25 — Grade 2: Fill Missing Letters (tr__n → train, emoji 🚂)
         q(.english, "fill_letters_train", "fill missing letters", "Blank Slot Builder", "Fill Missing Letters",
           "tr _ _ n",
-          "Fill the missing letters to make train.",
+          "Use the picture to fill the missing letters.",
           "common_school_words_pack",
           ["wordWithBlanks":"tr__n", "emoji":"🚂"],
           ["ai","ea","oa"], "ai", .grade2),
@@ -853,10 +853,10 @@ nonisolated enum CurriculumSystem {
 
         // 27 — Kindergarten: Letter Recognition (S vs similar)
         q(.english, "letter_S", "letter recognition", "Letter Tile", "Letter Recognition",
-          "Find the letter S",
-          "Tap the letter S.",
+          "Which letter does 🐍 start with?",
+          "Tap the first letter of the picture.",
           "letter_pack",
-          ["target":"S"],
+          ["target":"S", "emoji":"🐍"],
           ["S","C","G"], "S", .kindergarten),
 
         // 28 — Grade 1: Word Families (-ig family: pig)
@@ -885,15 +885,15 @@ nonisolated enum CurriculumSystem {
 
         // ----- Expanded Kindergarten -----
         q(.english, "letter_A", "letter recognition", "Letter Tile", "Letter Recognition",
-          "Find the letter A",
-          "Tap the letter A.",
+          "Which letter does 🍎 start with?",
+          "Tap the first letter of the picture.",
           "letter_pack",
-          ["target":"A"],
+          ["target":"A", "emoji":"🍎"],
           ["A","E","H"], "A", .kindergarten),
 
         q(.english, "upper_lower_D", "uppercase-lowercase", "Matching Card Set", "Uppercase-Lowercase Matching",
           "Match D to its lowercase letter.",
-          "Tap the lowercase d.",
+          "Tap its matching lowercase letter.",
           "letter_pack",
           ["uppercase":"D"],
           ["d","b","p"], "d", .kindergarten),
@@ -907,16 +907,16 @@ nonisolated enum CurriculumSystem {
 
         q(.english, "missing_letter_dog", "missing letter", "Blank Slot Builder", "Missing Letter",
           "d _ g",
-          "Choose the missing letter to make dog.",
+          "Use the picture to choose the missing letter.",
           "cvc_pack",
           ["wordWithBlank":"d_g", "emoji":"🐶"],
           ["o","a","i"], "o", .kindergarten),
 
         q(.english, "sight_and", "sight words", "Choice Card Row", "Sight Word Recognition",
-          "Which word is \"and\"?",
-          "Tap the word that matches.",
+          "I have a cat ___ a dog.",
+          "Tap the word that completes the sentence.",
           "sight_words_pack",
-          ["target":"and"],
+          ["target":"and", "sentence":"I have a cat ___ a dog."],
           ["and","can","had"], "and", .kindergarten),
 
         q(.english, "vocab_dog_picture", "vocabulary", "Matching Card Set", "Vocabulary Matching",
@@ -979,7 +979,7 @@ nonisolated enum CurriculumSystem {
 
         q(.english, "fill_letters_rain", "fill missing letters", "Blank Slot Builder", "Fill Missing Letters",
           "r _ _ n",
-          "Fill the missing letters to make rain.",
+          "Use the picture to fill the missing letters.",
           "common_school_words_pack",
           ["wordWithBlanks":"r__n", "emoji":"🌧️"],
           ["ai","ea","oa"], "ai", .grade2),
@@ -999,10 +999,10 @@ nonisolated enum CurriculumSystem {
           ["lake","fish","book"], "lake", .grade2),
 
         q(.english, "sight_their", "sight words", "Choice Card Row", "Sight Word Recognition",
-          "Which word is \"their\"?",
-          "Tap the word that matches.",
+          "The kids found ___ shoes.",
+          "Tap the word that completes the sentence.",
           "sight_words_pack",
-          ["target":"their"],
+          ["target":"their", "sentence":"The kids found ___ shoes."],
           ["their","there","three"], "their", .grade2),
 
         // ----- Expanded Grade 3 -----
