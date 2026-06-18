@@ -14,14 +14,17 @@ enum CurriculumSkill: String, CaseIterable, Codable, Hashable {
     // Math
     case counting, addition, subtraction, missingNumber, numberLine, makeTen
     case skipCounting, multiplicationArray, divisionSharing, patterns, fractions, time, compareNumbers
+    case timedBonus
     // English
     case letterRecognition, uppercaseLowercase, beginningSound, missingLetter
     case spelling, unscramble, rhyming, vocabulary, sightWord, wordFamily, sentenceBuilding, punctuation
+    case memoryMatch, wordSort
 
     var subject: Subject {
         switch self {
         case .counting, .addition, .subtraction, .missingNumber, .numberLine, .makeTen,
-             .skipCounting, .multiplicationArray, .divisionSharing, .patterns, .fractions, .time, .compareNumbers:
+             .skipCounting, .multiplicationArray, .divisionSharing, .patterns, .fractions, .time, .compareNumbers,
+             .timedBonus:
             return .math
         default:
             return .english
@@ -43,6 +46,7 @@ enum CurriculumSkill: String, CaseIterable, Codable, Hashable {
         case .fractions: "Fractions"
         case .time: "Telling Time"
         case .compareNumbers: "Compare Numbers"
+        case .timedBonus: "Speed Round"
         case .letterRecognition: "Letters"
         case .uppercaseLowercase: "Upper & Lower"
         case .beginningSound: "Beginning Sounds"
@@ -55,6 +59,8 @@ enum CurriculumSkill: String, CaseIterable, Codable, Hashable {
         case .wordFamily: "Word Families"
         case .sentenceBuilding: "Sentences"
         case .punctuation: "Punctuation"
+        case .memoryMatch: "Memory Match"
+        case .wordSort: "Word Sort"
         }
     }
 }
@@ -113,16 +119,16 @@ enum CurriculumGenerator {
     static func levelBoost(for grade: Int) -> Int { max(0, grade - 3) }
 
     static let mathPool: [GradeBand: [CurriculumSkill]] = [
-        .kindergarten: [.counting, .addition, .subtraction, .makeTen, .patterns, .compareNumbers],
-        .grade1: [.counting, .addition, .subtraction, .makeTen, .missingNumber, .numberLine, .patterns, .compareNumbers, .time],
-        .grade2: [.addition, .subtraction, .missingNumber, .numberLine, .skipCounting, .patterns, .compareNumbers, .time, .multiplicationArray],
-        .grade3: [.missingNumber, .numberLine, .skipCounting, .multiplicationArray, .divisionSharing, .fractions, .time, .compareNumbers, .patterns]
+        .kindergarten: [.counting, .addition, .subtraction, .makeTen, .patterns, .compareNumbers, .timedBonus],
+        .grade1: [.counting, .addition, .subtraction, .makeTen, .missingNumber, .numberLine, .patterns, .compareNumbers, .time, .timedBonus],
+        .grade2: [.addition, .subtraction, .missingNumber, .numberLine, .skipCounting, .patterns, .compareNumbers, .time, .multiplicationArray, .timedBonus],
+        .grade3: [.missingNumber, .numberLine, .skipCounting, .multiplicationArray, .divisionSharing, .fractions, .time, .compareNumbers, .patterns, .timedBonus]
     ]
     static let englishPool: [GradeBand: [CurriculumSkill]] = [
-        .kindergarten: [.letterRecognition, .uppercaseLowercase, .beginningSound, .missingLetter, .vocabulary, .sightWord],
-        .grade1: [.beginningSound, .missingLetter, .unscramble, .rhyming, .vocabulary, .sightWord, .wordFamily, .sentenceBuilding, .punctuation],
-        .grade2: [.spelling, .unscramble, .rhyming, .vocabulary, .sightWord, .wordFamily, .sentenceBuilding, .punctuation],
-        .grade3: [.spelling, .unscramble, .vocabulary, .sightWord, .sentenceBuilding, .punctuation]
+        .kindergarten: [.letterRecognition, .uppercaseLowercase, .beginningSound, .missingLetter, .vocabulary, .sightWord, .memoryMatch],
+        .grade1: [.beginningSound, .missingLetter, .unscramble, .rhyming, .vocabulary, .sightWord, .wordFamily, .sentenceBuilding, .punctuation, .memoryMatch, .wordSort],
+        .grade2: [.spelling, .unscramble, .rhyming, .vocabulary, .sightWord, .wordFamily, .sentenceBuilding, .punctuation, .memoryMatch, .wordSort],
+        .grade3: [.spelling, .unscramble, .vocabulary, .sightWord, .sentenceBuilding, .punctuation, .memoryMatch, .wordSort]
     ]
 
     static func skills(subject: Subject, grade: GradeBand) -> [CurriculumSkill] {
@@ -132,6 +138,25 @@ enum CurriculumGenerator {
     // MARK: Lesson / batch
 
     static func generateLesson(subject: Subject, grade: Int, focus: CurriculumSkill? = nil, level: Int = 1, seed: UInt64) -> Lesson {
+        var used = Set<String>()
+        return generateLesson(subject: subject, grade: grade, focus: focus, level: level, seed: seed, usedSignatures: &used)
+    }
+
+    /// Full question fingerprint: prompt + answer + the content payload (the
+    /// pairs/items/values that actually distinguish two questions sharing one
+    /// fixed prompt, e.g. memory match or "What time does the clock show?").
+    private static func signature(_ q: NormalizedQuestion) -> String {
+        let contentSig = q.questionContent
+            .sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }
+            .joined(separator: ";")
+        return q.prompt + "|" + q.correctAnswer + "|" + contentSig
+    }
+
+    /// Generate one lesson, avoiding any question signature already present in
+    /// `usedSignatures` (shared across the whole batch) so the same question is
+    /// never assigned to two different lessons until the pool is exhausted.
+    static func generateLesson(subject: Subject, grade: Int, focus: CurriculumSkill? = nil, level: Int = 1, seed: UInt64, usedSignatures: inout Set<String>) -> Lesson {
         var rng = SeededRNG(seed)
         let band = gradeBand(for: grade)
         let boost = levelBoost(for: grade)
@@ -141,23 +166,29 @@ enum CurriculumGenerator {
         let count = 3 // every lesson is exactly 3 questions
         var qs: [NormalizedQuestion] = []
         var seen = Set<String>()
+        // Pass 1 — unique within this lesson AND not used by any earlier lesson.
         var safety = 0
-        // Every question in a lesson uses the same focus skill so the lesson
-        // stays on-topic (a "Telling Time" lesson contains only time questions).
-        // Dedup on the full question signature — not just the prompt — because
-        // several skills reuse one fixed prompt (e.g. "What time does the clock
-        // show?") with different answers; deduping on the prompt alone silently
-        // dropped those and left lessons with fewer than 3 questions.
+        while qs.count < count && safety < 90 {
+            safety += 1
+            let candidate = generate(skill: focusSkill, band: band, level: level + boost, rng: &rng)
+            let sig = signature(candidate)
+            guard !seen.contains(sig), !usedSignatures.contains(sig) else { continue }
+            seen.insert(sig)
+            usedSignatures.insert(sig)
+            qs.append(candidate)
+        }
+        // Pass 2 — pool exhausted across lessons: relax the cross-lesson rule but
+        // keep the lesson internally unique (a full cycle has completed).
+        safety = 0
         while qs.count < count && safety < 60 {
             safety += 1
             let candidate = generate(skill: focusSkill, band: band, level: level + boost, rng: &rng)
-            let signature = candidate.prompt + "|" + candidate.correctAnswer
-                + "|" + candidate.answerChoices.sorted().joined(separator: ",")
-            guard seen.insert(signature).inserted else { continue }
+            let sig = signature(candidate)
+            guard seen.insert(sig).inserted else { continue }
+            usedSignatures.insert(sig)
             qs.append(candidate)
         }
-        // Guarantee exactly 3 questions even if a skill can't produce 3 distinct
-        // variations — pad with additional same-skill questions as a last resort.
+        // Last resort — guarantee exactly 3 questions.
         while qs.count < count {
             qs.append(generate(skill: focusSkill, band: band, level: level + boost, rng: &rng))
         }
@@ -172,6 +203,8 @@ enum CurriculumGenerator {
         guard !pool.isEmpty else { return [] }
         var lessons: [Lesson] = []
         var rng = SeededRNG(startSeed)
+        // Shared across the batch so no question is reused until the pool cycles.
+        var usedSignatures = Set<String>()
         for i in 0..<count {
             let focus: CurriculumSkill
             let weakInPool = weakSkills.filter { pool.contains($0) }
@@ -182,7 +215,7 @@ enum CurriculumGenerator {
             }
             let level = 1 + Int(rng.next() % 4)
             let seed = startSeed &+ UInt64(i + 1) &* 1_000_003
-            lessons.append(generateLesson(subject: subject, grade: grade, focus: focus, level: level, seed: seed))
+            lessons.append(generateLesson(subject: subject, grade: grade, focus: focus, level: level, seed: seed, usedSignatures: &usedSignatures))
         }
         return lessons
     }
@@ -204,6 +237,7 @@ enum CurriculumGenerator {
         case .fractions: return genFraction(level: level, rng: &rng)
         case .time: return genTime(band: band, level: level, rng: &rng)
         case .compareNumbers: return genCompare(band: band, level: level, rng: &rng)
+        case .timedBonus: return genTimedBonus(band: band, level: level, rng: &rng)
         case .letterRecognition: return genLetter(rng: &rng)
         case .uppercaseLowercase: return genUpperLower(rng: &rng)
         case .beginningSound: return genBeginningSound(rng: &rng)
@@ -216,6 +250,8 @@ enum CurriculumGenerator {
         case .wordFamily: return genWordFamily(rng: &rng)
         case .sentenceBuilding: return genSentence(band: band, rng: &rng)
         case .punctuation: return genPunctuation(rng: &rng)
+        case .memoryMatch: return genMemoryMatch(band: band, rng: &rng)
+        case .wordSort: return genWordSort(band: band, rng: &rng)
         }
     }
 
@@ -526,9 +562,52 @@ enum CurriculumGenerator {
                   choices: [String(a), String(b)], correct: String(bigger), grade: band)
     }
 
+    private static func genTimedBonus(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
+        // A quick arithmetic question wrapped in a countdown ring for a bonus.
+        let cap: Int
+        switch band {
+        case .kindergarten: cap = 5
+        case .grade1: cap = 10
+        case .grade2: cap = 20
+        case .grade3: cap = 50
+        }
+        let a = 1 + Int(rng.next() % UInt64(cap))
+        let b = 1 + Int(rng.next() % UInt64(cap))
+        let plus = Int(rng.next() % 2) == 0 || a <= b
+        let answer = plus ? a + b : a - b
+        let symbol = plus ? "+" : "−"
+        return nq(subject: .math, skill: "timed bonus", component: "Choice Card Row", template: "Timed Bonus",
+                  prompt: "Quick! \(a) \(symbol) \(b) = ?",
+                  directions: "Answer before the timer runs out for a bonus!",
+                  source: "symbol_support_pack",
+                  content: ["equation": "\(a) \(symbol) \(b)"],
+                  choices: mcChoices(answer, around: 3, rng: &rng), correct: String(answer), grade: band)
+    }
+
     // MARK: - English generators
 
     private static let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".map { String($0) }
+    /// Visually/phonetically confusable UPPERCASE letters so recognition requires
+    /// real discrimination, not elimination of obviously-different shapes.
+    private static let upperConfusables: [String: [String]] = [
+        "B": ["D", "P", "R"], "D": ["B", "O", "P"], "P": ["R", "B", "F"], "R": ["P", "B", "K"],
+        "M": ["N", "W", "H"], "N": ["M", "H", "W"], "W": ["M", "V", "N"], "V": ["W", "Y", "U"],
+        "S": ["C", "G", "Z"], "C": ["G", "O", "S"], "G": ["C", "O", "Q"], "O": ["Q", "C", "D"],
+        "Q": ["O", "G", "C"], "E": ["F", "B", "L"], "F": ["E", "P", "T"], "T": ["I", "F", "L"],
+        "I": ["L", "J", "T"], "L": ["I", "J", "T"], "J": ["I", "L", "U"], "U": ["V", "Y", "J"],
+        "K": ["X", "R", "H"], "X": ["K", "Y", "V"], "Y": ["V", "X", "U"], "H": ["M", "N", "K"],
+        "A": ["H", "R", "V"], "Z": ["S", "N", "X"]
+    ]
+    /// Confusable LOWERCASE letters (b/d/p/q etc. are the classic reversals).
+    private static let lowerConfusables: [String: [String]] = [
+        "b": ["d", "p", "h"], "d": ["b", "p", "q"], "p": ["q", "b", "g"], "q": ["p", "g", "d"],
+        "m": ["n", "w", "h"], "n": ["m", "h", "r"], "w": ["m", "v", "u"], "v": ["w", "y", "u"],
+        "a": ["e", "o", "c"], "e": ["a", "c", "o"], "o": ["c", "e", "a"], "c": ["e", "o", "a"],
+        "g": ["q", "p", "y"], "h": ["b", "n", "k"], "i": ["j", "l", "t"], "l": ["i", "j", "t"],
+        "j": ["i", "l", "g"], "u": ["v", "n", "w"], "r": ["n", "v", "k"], "k": ["h", "x", "b"],
+        "f": ["t", "l", "r"], "t": ["f", "l", "i"], "s": ["c", "z", "e"], "y": ["v", "g", "x"],
+        "x": ["k", "y", "z"], "z": ["s", "x", "n"]
+    ]
     private static let cvcWords: [(String, String)] = [
         ("cat", "🐱"), ("dog", "🐶"), ("hat", "🎩"), ("bat", "🦇"), ("pig", "🐷"),
         ("sun", "☀️"), ("bus", "🚌"), ("cup", "☕"), ("fox", "🦊"), ("hen", "🐔"),
@@ -582,11 +661,30 @@ enum CurriculumGenerator {
         ("fast", "quick", ["slow", "still"]),
         ("smart", "clever", ["silly", "lazy"])
     ]
+    /// Picture-vocabulary grouped by category so a word's distractors always
+    /// come from the SAME category (e.g. matching "monkey" only shows other
+    /// animals — never an unrelated object). This is what makes the question
+    /// require real word knowledge instead of being solvable by elimination.
+    private static let vocabCategories: [[(String, String)]] = [
+        [("cat", "🐱"), ("dog", "🐶"), ("pig", "🐷"), ("fox", "🦊"), ("hen", "🐔"),
+         ("monkey", "🐒"), ("rabbit", "🐰"), ("turtle", "🐢"), ("dragon", "🐉")],
+        [("apple", "🍎"), ("banana", "🍌"), ("cookie", "🍪"), ("pizza", "🍕"),
+         ("carrot", "🥕"), ("corn", "🌽"), ("bread", "🍞")],
+        [("car", "🚗"), ("bus", "🚌"), ("rocket", "🚀"), ("bed", "🛏️"),
+         ("pen", "🖊️"), ("book", "📚"), ("clock", "⏰")],
+        [("flower", "🌸"), ("tree", "🌳"), ("sun", "☀️"), ("star", "⭐"),
+         ("cloud", "☁️"), ("moon", "🌙")]
+    ]
 
     private static func genLetter(rng: inout SeededRNG) -> NormalizedQuestion {
         let target = letters.randomElement(using: &rng) ?? "M"
-        var pool = letters.filter { $0 != target }.shuffled(using: &rng)
-        let distractors = Array(pool.prefix(2))
+        // Prefer look-alike distractors so the child must visually discriminate.
+        let distractors: [String]
+        if let confusable = upperConfusables[target] {
+            distractors = Array(confusable.shuffled(using: &rng).prefix(2))
+        } else {
+            distractors = Array(letters.filter { $0 != target }.shuffled(using: &rng).prefix(2))
+        }
         var choices = ([target] + distractors).shuffled(using: &rng)
         if !choices.contains(target) { choices[0] = target }
         return nq(subject: .english, skill: "letter recognition", component: "Letter Tile", template: "Letter Recognition",
@@ -600,7 +698,13 @@ enum CurriculumGenerator {
     private static func genUpperLower(rng: inout SeededRNG) -> NormalizedQuestion {
         let upper = letters.randomElement(using: &rng) ?? "B"
         let lower = upper.lowercased()
-        var distractors = letters.filter { $0 != upper }.shuffled(using: &rng).prefix(2).map { $0.lowercased() }
+        // Visually similar lowercase distractors (b/d/p reversals etc.).
+        let distractors: [String]
+        if let confusable = lowerConfusables[lower] {
+            distractors = Array(confusable.shuffled(using: &rng).prefix(2))
+        } else {
+            distractors = Array(letters.filter { $0 != upper }.shuffled(using: &rng).prefix(2).map { $0.lowercased() })
+        }
         var choices = ([lower] + Array(distractors)).shuffled(using: &rng)
         if !choices.contains(lower) { choices[0] = lower }
         return nq(subject: .english, skill: "uppercase-lowercase", component: "Matching Card Set", template: "Uppercase-Lowercase Matching",
@@ -612,15 +716,17 @@ enum CurriculumGenerator {
     }
 
     private static func genBeginningSound(rng: inout SeededRNG) -> NormalizedQuestion {
-        let pool: [(String, String)] = [("b", "🐻 bear"), ("s", "🐍 snake"), ("c", "🐱 cat"),
-                                        ("d", "🐶 dog"), ("f", "🐸 frog"), ("r", "🐰 rabbit")]
-        let pick = pool.randomElement(using: &rng) ?? ("b", "🐻 bear")
+        // Emoji-only choices: the child matches the target letter to the picture
+        // whose word starts with that sound. No written words, no audio.
+        let pool: [(String, String)] = [("b", "🐻"), ("s", "🐍"), ("c", "🐱"),
+                                        ("d", "🐶"), ("f", "🐸"), ("r", "🐰")]
+        let pick = pool.randomElement(using: &rng) ?? ("b", "🐻")
         let others = pool.filter { $0.0 != pick.0 }.shuffled(using: &rng).prefix(2).map { $0.1 }
         var choices = ([pick.1] + others).shuffled(using: &rng)
         if !choices.contains(pick.1) { choices[0] = pick.1 }
         return nq(subject: .english, skill: "beginning sounds", component: "Choice Card Row", template: "Beginning Sounds",
-                  prompt: "Which word starts with the /\(pick.0)/ sound?",
-                  directions: "Tap the one that starts with \(pick.0).",
+                  prompt: "Which picture starts with the letter \(pick.0.uppercased())?",
+                  directions: "Tap the picture that starts with \(pick.0.uppercased()).",
                   source: "animal_vocab_pack",
                   content: ["sound": pick.0],
                   choices: choices, correct: pick.1, grade: .kindergarten)
@@ -720,8 +826,10 @@ enum CurriculumGenerator {
                       content: ["word": pick.0],
                       choices: choices, correct: pick.1, grade: band)
         }
-        let pick = (longerWords + cvcWords).randomElement(using: &rng) ?? ("apple", "🍎")
-        let others = (cvcWords + longerWords).filter { $0.0 != pick.0 }.shuffled(using: &rng).prefix(2).map { $0.1 }
+        // Same-category distractors only — see `vocabCategories`.
+        let category = vocabCategories.randomElement(using: &rng) ?? vocabCategories[0]
+        let pick = category.randomElement(using: &rng) ?? ("apple", "🍎")
+        let others = category.filter { $0.0 != pick.0 }.shuffled(using: &rng).prefix(2).map { $0.1 }
         var choices = ([pick.1] + Array(others)).shuffled(using: &rng)
         if !choices.contains(pick.1) { choices[0] = pick.1 }
         return nq(subject: .english, skill: "vocabulary", component: "Matching Card Set", template: "Vocabulary Matching",
@@ -787,6 +895,61 @@ enum CurriculumGenerator {
                   source: "simple_nouns_pack",
                   content: ["tokens": tokens.joined(separator: ",")],
                   choices: [sentence], correct: sentence, grade: band)
+    }
+
+    private static let memoryEmojiPairs: [(String, String)] = [
+        ("🐱", "cat"), ("🐶", "dog"), ("🍎", "apple"), ("☀️", "sun"),
+        ("🚗", "car"), ("📚", "book"), ("🌸", "flower"), ("⭐", "star")
+    ]
+
+    private static func genMemoryMatch(band: GradeBand, rng: inout SeededRNG) -> NormalizedQuestion {
+        // Kindergarten: uppercase↔lowercase. Older grades: word↔picture.
+        let pairs: [(String, String)]
+        let prompt: String
+        if band == .kindergarten {
+            let picks = letters.shuffled(using: &rng).prefix(3).map { $0 }
+            pairs = picks.map { ($0, $0.lowercased()) }
+            prompt = "Match each capital letter to its lowercase."
+        } else {
+            let count = band == .grade1 ? 3 : 4
+            let picks = memoryEmojiPairs.shuffled(using: &rng).prefix(count)
+            pairs = picks.map { ($0.0, $0.1) }
+            prompt = "Find the matching pairs."
+        }
+        let encoded = pairs.map { "\($0.0)|\($0.1)" }.joined(separator: ",")
+        return nq(subject: .english, skill: "memory match", component: "Memory Cards", template: "Memory Match",
+                  prompt: prompt,
+                  directions: "Tap two cards to find a pair.",
+                  source: "letter_pack",
+                  content: ["pairs": encoded],
+                  choices: ["matched"], correct: "matched", grade: band)
+    }
+
+    private static let sortGroups: [(String, String, [String], [String])] = [
+        ("Animals", "Food", ["🐶 dog", "🐱 cat", "🐰 rabbit"], ["🍎 apple", "🍕 pizza", "🍪 cookie"]),
+        ("Animals", "Things", ["🐸 frog", "🐢 turtle", "🐍 snake"], ["🚗 car", "📚 book", "⭐ star"]),
+        ("Nouns", "Verbs", ["dog", "book", "school"], ["run", "jump", "read"]),
+        ("Food", "Plants", ["🍌 banana", "🥕 carrot", "🌽 corn"], ["🌸 flower", "🌳 tree", "🌱 sprout"])
+    ]
+
+    private static func genWordSort(band: GradeBand, rng: inout SeededRNG) -> NormalizedQuestion {
+        // Grammar sort (Nouns/Verbs) at grade2+, picture-category sort below.
+        let group: (String, String, [String], [String])
+        if band == .grade2 || band == .grade3 {
+            group = sortGroups[2]
+        } else {
+            group = [sortGroups[0], sortGroups[1], sortGroups[3]].randomElement(using: &rng) ?? sortGroups[0]
+        }
+        let perBucket = band == .kindergarten ? 2 : 3
+        let aItems = Array(group.2.shuffled(using: &rng).prefix(perBucket))
+        let bItems = Array(group.3.shuffled(using: &rng).prefix(perBucket))
+        let items = (aItems.map { "\($0)|\(group.0)" } + bItems.map { "\($0)|\(group.1)" }).shuffled(using: &rng).joined(separator: ",")
+        return nq(subject: .english, skill: "word sort", component: "Sort Buckets", template: "Category Sort",
+                  prompt: "Sort each into \(group.0) or \(group.1).",
+                  directions: "Tap an item, then tap its bucket.",
+                  source: "word_packs",
+                  content: ["buckets": "\(group.0),\(group.1)", "items": items],
+                  choices: ["sorted"], correct: "sorted", grade: band)
     }
 
     private static func genPunctuation(rng: inout SeededRNG) -> NormalizedQuestion {

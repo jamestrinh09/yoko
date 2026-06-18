@@ -32,6 +32,7 @@ struct LessonPlayerView: View {
     @State private var lessonRewards: [MilestoneReward] = []
     @State private var showStreak: Bool = false
     @State private var unscramble = UnscrambleState()
+    @State private var hint = QuestionHintState()
 
     enum Feedback { case none, correct, incorrect }
 
@@ -151,7 +152,8 @@ struct LessonPlayerView: View {
                     question: question,
                     selectedAnswer: $selectedAnswer,
                     feedback: feedback,
-                    unscramble: unscramble
+                    unscramble: unscramble,
+                    hint: hint
                 )
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -258,10 +260,14 @@ struct LessonPlayerView: View {
             if unscramble.active {
                 Spacer(minLength: 4)
                 UnscrambleHintButton(state: unscramble)
+            } else if hint.active {
+                Spacer(minLength: 4)
+                QuestionHintButton(state: hint)
             }
         }
         .frame(maxWidth: .infinity)
         .animation(.spring(duration: 0.3), value: unscramble.active)
+        .animation(.spring(duration: 0.3), value: hint.active)
     }
 
     @ViewBuilder

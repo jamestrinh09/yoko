@@ -569,7 +569,33 @@ nonisolated enum CurriculumSystem {
           "Drag the missing number.",
           "symbol_support_pack",
           ["equation":"__ × 4 = 20", "chips":"3,4,5"],
-          ["3","4","5"], "5", .grade3)
+          ["3","4","5"], "5", .grade3),
+
+        // ----- Timed Bonus (Speed Round) — countdown ring, 2 per grade band -----
+        q(.math, "timed_k_2plus3", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 2 + 3 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"2 + 3"], ["4","5","6"], "5", .kindergarten),
+        q(.math, "timed_k_4plus1", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 4 + 1 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"4 + 1"], ["4","5","6"], "5", .kindergarten),
+        q(.math, "timed_g1_6plus4", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 6 + 4 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"6 + 4"], ["9","10","11"], "10", .grade1),
+        q(.math, "timed_g1_9minus3", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 9 − 3 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"9 − 3"], ["5","6","7"], "6", .grade1),
+        q(.math, "timed_g2_14plus5", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 14 + 5 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"14 + 5"], ["18","19","20"], "19", .grade2),
+        q(.math, "timed_g2_20minus6", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 20 − 6 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"20 − 6"], ["13","14","15"], "14", .grade2),
+        q(.math, "timed_g3_8x3", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 8 × 3 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"8 × 3"], ["21","24","27"], "24", .grade3),
+        q(.math, "timed_g3_7x4", "timed bonus", "Choice Card Row", "Timed Bonus",
+          "Quick! 7 × 4 = ?", "Answer before the timer runs out for a bonus!",
+          "symbol_support_pack", ["equation":"7 × 4"], ["24","28","32"], "28", .grade3)
     ]
 
     // =========================================================
@@ -625,11 +651,11 @@ nonisolated enum CurriculumSystem {
 
         // 2 — Kindergarten: Beginning Sounds (/b/ → bear)
         q(.english, "begin_sound_b", "beginning sounds", "Choice Card Row", "Beginning Sounds",
-          "Which word starts with the /b/ sound?",
-          "Tap the emoji that starts with b.",
+          "Which picture starts with the letter B?",
+          "Tap the picture that starts with B.",
           "animal_vocab_pack",
           ["sound":"b"],
-          ["🐻 bear","🐸 frog","🐢 turtle"], "🐻 bear", .kindergarten),
+          ["🐻","🐸","🐢"], "🐻", .kindergarten),
 
         // 3 — Kindergarten: Missing Letter (c_t → cat, emoji hint 🐱)
         q(.english, "missing_letter_cat", "missing letter", "Blank Slot Builder", "Missing Letter",
@@ -745,11 +771,11 @@ nonisolated enum CurriculumSystem {
 
         // 17 — Grade 1: Beginning Sound (/s/ → snake)
         q(.english, "begin_sound_s", "beginning sounds", "Choice Card Row", "Beginning Sounds",
-          "Which word starts with the /s/ sound?",
-          "Tap the one that starts with s.",
+          "Which picture starts with the letter S?",
+          "Tap the picture that starts with S.",
           "animal_vocab_pack",
           ["sound":"s"],
-          ["🐍 snake","🐻 bear","🐸 frog"], "🐍 snake", .grade1),
+          ["🐍","🐻","🐸"], "🐍", .grade1),
 
         // 18 — Grade 1: Unscramble (d o g → dog, emoji 🐶)
         q(.english, "unscramble_dog", "unscramble", "Word Builder Tray", "Unscramble Word",
@@ -873,11 +899,11 @@ nonisolated enum CurriculumSystem {
           ["d","b","p"], "d", .kindergarten),
 
         q(.english, "begin_sound_d_dog", "beginning sounds", "Choice Card Row", "Beginning Sounds",
-          "Which word starts with the /d/ sound?",
-          "Tap the one that starts with d.",
+          "Which picture starts with the letter D?",
+          "Tap the picture that starts with D.",
           "animal_vocab_pack",
           ["sound":"d"],
-          ["🐶 dog","🐱 cat","🐻 bear"], "🐶 dog", .kindergarten),
+          ["🐶","🐱","🐻"], "🐶", .kindergarten),
 
         q(.english, "missing_letter_dog", "missing letter", "Blank Slot Builder", "Missing Letter",
           "d _ g",
@@ -937,11 +963,11 @@ nonisolated enum CurriculumSystem {
           [".","?","!"], ".", .grade1),
 
         q(.english, "begin_sound_f_frog", "beginning sounds", "Choice Card Row", "Beginning Sounds",
-          "Which word starts with the /f/ sound?",
-          "Tap the one that starts with f.",
+          "Which picture starts with the letter F?",
+          "Tap the picture that starts with F.",
           "animal_vocab_pack",
           ["sound":"f"],
-          ["🐸 frog","🐻 bear","🐍 snake"], "🐸 frog", .grade1),
+          ["🐸","🐻","🐍"], "🐸", .grade1),
 
         // ----- Expanded Grade 2 -----
         q(.english, "spelling_friend", "spelling", "Choice Card Row", "Choose Correct Spelling",
@@ -1013,7 +1039,59 @@ nonisolated enum CurriculumSystem {
           "Choose the correct punctuation mark.",
           "symbol_support_pack",
           ["sentence":"Are you coming with us"],
-          [".","?","!"], "?", .grade3)
+          [".","?","!"], "?", .grade3),
+
+        // ----- Memory Match — flip cards, 2 per grade band -----
+        q(.english, "memory_k_abc", "memory match", "Memory Cards", "Memory Match",
+          "Match each capital letter to its lowercase.", "Tap two cards to find a pair.",
+          "letter_pack", ["pairs":"A|a,B|b,C|c"], ["matched"], "matched", .kindergarten),
+        q(.english, "memory_k_def", "memory match", "Memory Cards", "Memory Match",
+          "Match each capital letter to its lowercase.", "Tap two cards to find a pair.",
+          "letter_pack", ["pairs":"D|d,E|e,F|f"], ["matched"], "matched", .kindergarten),
+        q(.english, "memory_g1_words", "memory match", "Memory Cards", "Memory Match",
+          "Find the matching pairs.", "Tap two cards to find a pair.",
+          "animal_vocab_pack", ["pairs":"🐱|cat,🐶|dog,☀️|sun"], ["matched"], "matched", .grade1),
+        q(.english, "memory_g1_words2", "memory match", "Memory Cards", "Memory Match",
+          "Find the matching pairs.", "Tap two cards to find a pair.",
+          "animal_vocab_pack", ["pairs":"🍎|apple,🚗|car,⭐|star"], ["matched"], "matched", .grade1),
+        q(.english, "memory_g2_words", "memory match", "Memory Cards", "Memory Match",
+          "Find the matching pairs.", "Tap two cards to find a pair.",
+          "food_vocab_pack", ["pairs":"🍌|banana,📚|book,🌸|flower,🐢|turtle"], ["matched"], "matched", .grade2),
+        q(.english, "memory_g2_words2", "memory match", "Memory Cards", "Memory Match",
+          "Find the matching pairs.", "Tap two cards to find a pair.",
+          "food_vocab_pack", ["pairs":"🍕|pizza,🥕|carrot,🐰|rabbit,🌳|tree"], ["matched"], "matched", .grade2),
+        q(.english, "memory_g3_words", "memory match", "Memory Cards", "Memory Match",
+          "Find the matching pairs.", "Tap two cards to find a pair.",
+          "places_pack", ["pairs":"🌸|flower,🐉|dragon,🚀|rocket,🐒|monkey"], ["matched"], "matched", .grade3),
+        q(.english, "memory_g3_words2", "memory match", "Memory Cards", "Memory Match",
+          "Find the matching pairs.", "Tap two cards to find a pair.",
+          "places_pack", ["pairs":"🏫|school,🌙|moon,⏰|clock,🐍|snake"], ["matched"], "matched", .grade3),
+
+        // ----- Category Sort — multi-item drag-to-sort, 2 per grade band -----
+        q(.english, "sort_k_animals_food", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Animals or Food.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Animals,Food", "items":"🐶 dog|Animals,🐱 cat|Animals,🍎 apple|Food,🍕 pizza|Food"], ["sorted"], "sorted", .kindergarten),
+        q(.english, "sort_k_animals_things", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Animals or Things.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Animals,Things", "items":"🐸 frog|Animals,🐢 turtle|Animals,🚗 car|Things,📚 book|Things"], ["sorted"], "sorted", .kindergarten),
+        q(.english, "sort_g1_animals_food", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Animals or Food.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Animals,Food", "items":"🐰 rabbit|Animals,🐍 snake|Animals,🍪 cookie|Food,🍌 banana|Food"], ["sorted"], "sorted", .grade1),
+        q(.english, "sort_g1_food_plants", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Food or Plants.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Food,Plants", "items":"🥕 carrot|Food,🌽 corn|Food,🌸 flower|Plants,🌳 tree|Plants"], ["sorted"], "sorted", .grade1),
+        q(.english, "sort_g2_nouns_verbs", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Nouns or Verbs.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Nouns,Verbs", "items":"dog|Nouns,book|Nouns,run|Verbs,jump|Verbs"], ["sorted"], "sorted", .grade2),
+        q(.english, "sort_g2_nouns_verbs2", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Nouns or Verbs.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Nouns,Verbs", "items":"school|Nouns,apple|Nouns,read|Verbs,swim|Verbs"], ["sorted"], "sorted", .grade2),
+        q(.english, "sort_g3_nouns_verbs", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Nouns or Verbs.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Nouns,Verbs", "items":"freedom|Nouns,garden|Nouns,sing|Verbs,dance|Verbs"], ["sorted"], "sorted", .grade3),
+        q(.english, "sort_g3_nouns_verbs2", "word sort", "Sort Buckets", "Category Sort",
+          "Sort each into Nouns or Verbs.", "Tap an item, then tap its bucket.",
+          "word_packs", ["buckets":"Nouns,Verbs", "items":"happiness|Nouns,house|Nouns,eat|Verbs,sleep|Verbs"], ["sorted"], "sorted", .grade3)
     ]
 
     // MARK: - Private builders (unchanged)

@@ -5,6 +5,7 @@ struct QuestionRenderer: View {
     @Binding var selectedAnswer: String?
     let feedback: LessonPlayerView.Feedback
     var unscramble: UnscrambleState = UnscrambleState()
+    var hint: QuestionHintState = QuestionHintState()
 
     @State private var builtTokens: [String] = []
 
@@ -73,7 +74,12 @@ struct QuestionRenderer: View {
         .onChange(of: questionKey) { _, _ in
             builtTokens = []
             selectedAnswer = nil
+            configureHint()
         }
+        .onChange(of: feedback) { _, _ in
+            hint.isLocked = isLocked
+        }
+        .onAppear { configureHint() }
     }
 
     // MARK: - Question Meta
@@ -101,6 +107,52 @@ struct QuestionRenderer: View {
         normalized?.directions ?? "Tap your answer"
     }
 
+    // MARK: - Universal Hint
+
+    /// True for choice-based templates where the hint can fade one wrong option.
+    /// Unscramble owns its own hint (locking placed letters) so it opts out here.
+    private var supportsGenericHint: Bool {
+        guard template != "unscramble_word" else { return false }
+        return choices.count >= 2 && correctValue != nil
+    }
+
+    private var correctValue: String? { normalized?.correctAnswer }
+
+    /// A single wrong choice to fade out when the hint is revealed — teaches by
+    /// elimination without giving away the answer.
+    private var hintWrongChoice: String? {
+        guard let correct = correctValue else { return nil }
+        return choices.first { $0 != correct }
+    }
+
+    /// The choice currently faded by an active, revealed hint (nil otherwise).
+    private var hintFadedChoice: String? {
+        (hint.active && hint.revealed) ? hint.fadedChoice : nil
+    }
+
+    private func configureHint() {
+        hint.revealed = false
+        hint.available = false
+        hint.glow = false
+        hint.isLocked = isLocked
+        guard supportsGenericHint else {
+            hint.active = false
+            hint.fadedChoice = nil
+            return
+        }
+        hint.active = true
+        hint.fadedChoice = hintWrongChoice
+        let key = questionKey
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            guard hint.active, hint.questionKey == key, !hint.revealed else { return }
+            hint.available = true
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                hint.glow = true
+            }
+        }
+        hint.questionKey = key
+    }
+
     // MARK: - Interactive Content
 
     @ViewBuilder
@@ -120,7 +172,8 @@ struct QuestionRenderer: View {
                 left: content["left"] ?? choices.first ?? "",
                 right: content["right"] ?? choices.last ?? "",
                 selected: selectedAnswer,
-                locked: isLocked
+                locked: isLocked,
+                fadedChoice: hintFadedChoice
             ) { selectedAnswer = $0 }
 
         case "addition_by_counting":
@@ -160,13 +213,19 @@ struct QuestionRenderer: View {
             visualTapGrid(items: choices, style: .letter)
 
         case "uppercase_lowercase_matching":
-            MatchingCardSet(left: content["uppercase"] ?? "B", right: choices, selected: selectedAnswer, locked: isLocked) { selectedAnswer = $0 }
+            MatchingCardSet(left: content["uppercase"] ?? "B", right: choices, selected: selectedAnswer, locked: isLocked, fadedChoice: hintFadedChoice) { selectedAnswer = $0 }
 
         case "beginning_sounds":
-            // Phonics by ear: only the emoji shows as a hint and each choice has a
-            // speaker button that reads the word aloud. The written word stays
-            // hidden until the child answers, so it can't be solved by reading.
-            SoundChoiceRow(choices: choices, selected: selectedAnswer, revealWord: isLocked, locked: isLocked) { selectedAnswer = $0 }
+            // Letter-to-sound matching (no audio): the target letter shows big and
+            // bold and the child taps the emoji whose word starts with that sound.
+            // Choices are emoji-only, so it can't be solved by reading.
+            LetterSoundMatchCard(
+                letter: content["sound"] ?? "",
+                choices: choices,
+                selected: selectedAnswer,
+                locked: isLocked,
+                fadedChoice: hintFadedChoice
+            ) { selectedAnswer = $0 }
 
         case "choose_correct_spelling", "sight_word_recognition", "punctuation_choice", "rhyming_words", "word_families", "vocabulary_matching":
             visualTapGrid(items: choices, style: englishChoiceStyle)
@@ -178,7 +237,8 @@ struct QuestionRenderer: View {
                 choices: choices,
                 emoji: content["emoji"],
                 selected: selectedAnswer,
-                locked: isLocked
+                locked: isLocked,
+                fadedChoice: hintFadedChoice
             ) { selectedAnswer = $0 }
 
         case "unscramble_word":
@@ -202,6 +262,34 @@ struct QuestionRenderer: View {
 
         case "sequencing":
             sequenceBuildCard(cards: sequenceCards)
+
+        case "memory_match":
+            // Flip-card memory game: find every matching pair (e.g. uppercase ↔
+            // lowercase, or word ↔ picture). Completing all pairs answers it.
+            MemoryMatchCard(pairs: memoryPairs, locked: isLocked) {
+                selectedAnswer = normalized?.correctAnswer ?? "matched"
+            }
+
+        case "category_sort":
+            // Multi-item drag-to-sort: place several items into the right bucket.
+            SortBucketsCard(
+                buckets: splitComma(content["buckets"]),
+                items: sortItems,
+                correct: normalized?.correctAnswer ?? "sorted",
+                locked: isLocked
+            ) { selectedAnswer = $0 }
+
+        case "timed_bonus":
+            // Countdown-ring bonus round: answer before the ring empties for a
+            // bonus star. No penalty if time runs out — just no bonus.
+            TimedBonusCard(
+                choices: choices,
+                selected: selectedAnswer,
+                locked: isLocked,
+                seconds: 10,
+                questionKey: questionKey,
+                fadedChoice: hintFadedChoice
+            ) { selectedAnswer = $0 }
 
         default:
             visualTapGrid(items: choices, style: .word)
@@ -330,7 +418,7 @@ struct QuestionRenderer: View {
     }
 
     private func visualTapGrid(items: [String], style: ChoiceStyle) -> some View {
-        FlowRow(items: items, selected: selectedAnswer, locked: isLocked) { item in
+        FlowRow(items: items, selected: selectedAnswer, locked: isLocked, fadedChoice: hintFadedChoice) { item in
             guard !isLocked else { return }
             selectedAnswer = item
         }
@@ -379,6 +467,22 @@ struct QuestionRenderer: View {
     private var tokenValues: [String] { splitComma(content["tokens"]).isEmpty ? choices : splitComma(content["tokens"]) }
     private var sequenceCards: [String] { splitComma(content["cards"]).isEmpty ? choices : splitComma(content["cards"]) }
     private var letterChips: [String] { splitComma(content["letters"]).isEmpty ? choices : splitComma(content["letters"]) }
+    /// Pairs for the memory-match game, encoded as "front|back,front|back".
+    private var memoryPairs: [(String, String)] {
+        splitComma(content["pairs"]).compactMap { entry in
+            let parts = entry.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2 else { return nil }
+            return (parts[0], parts[1])
+        }
+    }
+    /// Items for the category-sort game, encoded as "label|bucket,label|bucket".
+    private var sortItems: [(label: String, bucket: String)] {
+        splitComma(content["items"]).compactMap { entry in
+            let parts = entry.split(separator: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+            guard parts.count == 2 else { return nil }
+            return (parts[0], parts[1])
+        }
+    }
     private var visualSequence: String { (content["sequence"] ?? question.prompt).replacingOccurrences(of: ",", with: "  ").replacingOccurrences(of: "blank", with: "__") }
 
     private func equationLabel(_ value: String?) -> some View {
@@ -428,12 +532,70 @@ private extension EnvironmentValues {
     }
 }
 
+// MARK: - Universal Hint State
+
+/// Shared hint state for any choice-based question. Lifted out of the renderer
+/// so the hint button can live in the lesson's bottom key row, mirroring the
+/// unscramble hint. When `revealed`, the renderer fades one wrong choice.
+@Observable
+final class QuestionHintState {
+    var active: Bool = false
+    var available: Bool = false
+    var revealed: Bool = false
+    var glow: Bool = false
+    var fadedChoice: String? = nil
+    var isLocked: Bool = false
+    var questionKey: String = ""
+}
+
+struct QuestionHintButton: View {
+    @Bindable var state: QuestionHintState
+
+    var body: some View {
+        let glowActive = state.available && !state.revealed
+        return Button {
+            guard !state.isLocked else { return }
+            withAnimation(.spring(duration: 0.3)) {
+                state.revealed = true
+                state.glow = false
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 13, weight: .heavy))
+                Text("Hint!")
+                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                state.revealed
+                    ? DS.Color.accent
+                    : Color(red: 1.0, green: 0.78, blue: 0.10)
+            )
+            .clipShape(.capsule)
+            .shadow(
+                color: glowActive
+                    ? Color.yellow.opacity(state.glow ? 0.85 : 0.25)
+                    : Color.black.opacity(0.08),
+                radius: glowActive ? (state.glow ? 16 : 6) : 4,
+                y: 2
+            )
+            .scaleEffect(glowActive && state.glow ? 1.06 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .disabled(state.isLocked || state.revealed)
+    }
+}
+
 // MARK: - Flow Row (Answer Chips)
 
 struct FlowRow: View {
     let items: [String]
     let selected: String?
     let locked: Bool
+    var fadedChoice: String? = nil
     let action: (String) -> Void
     @Environment(\.choiceStyle) private var style
 
@@ -478,8 +640,10 @@ struct FlowRow: View {
                         )
                 }
                 .buttonStyle(.plain)
+                .opacity(fadedChoice == item ? 0.28 : 1)
                 .scaleEffect(selected == item ? 1.08 : 1.0)
                 .animation(.spring(response: 0.22, dampingFraction: 0.45), value: selected)
+                .animation(.easeInOut(duration: 0.3), value: fadedChoice)
             }
         }
     }
@@ -765,6 +929,7 @@ struct MatchingCardSet: View {
     let right: [String]
     let selected: String?
     let locked: Bool
+    var fadedChoice: String? = nil
     let action: (String) -> Void
 
     var body: some View {
@@ -776,7 +941,7 @@ struct MatchingCardSet: View {
                 .clipShape(.rect(cornerRadius: 22))
                 .shadow(color: Color.black.opacity(0.03), radius: 6, x: 0, y: 2)
 
-            FlowRow(items: right, selected: selected, locked: locked, action: action)
+            FlowRow(items: right, selected: selected, locked: locked, fadedChoice: fadedChoice, action: action)
                 .environment(\.choiceStyle, .letter)
         }
     }
@@ -1049,6 +1214,7 @@ struct MissingLetterCard: View {
     let emoji: String?
     let selected: String?
     let locked: Bool
+    var fadedChoice: String? = nil
     let onSelect: (String) -> Void
 
     private struct Segment: Identifiable {
@@ -1094,7 +1260,7 @@ struct MissingLetterCard: View {
                 }
             }
 
-            FlowRow(items: choices, selected: selected, locked: locked, action: onSelect)
+            FlowRow(items: choices, selected: selected, locked: locked, fadedChoice: fadedChoice, action: onSelect)
                 .environment(\.choiceStyle, .letter)
         }
     }
@@ -1118,87 +1284,85 @@ struct MissingLetterCard: View {
     }
 }
 
-// MARK: - Sound Choice Row (Beginning Sounds — phonics by ear)
+// MARK: - Letter-to-Sound Match (Beginning Sounds — no audio)
 
-struct SoundChoiceRow: View {
-    let choices: [String]        // each like "\u{1F43B} bear"
+/// Shows the target letter big and bold, then emoji-only choices. The child taps
+/// the picture whose word starts with that letter's sound. Choices carry no
+/// written word, so the exercise can't be solved by reading.
+struct LetterSoundMatchCard: View {
+    let letter: String           // e.g. "b"
+    let choices: [String]        // emoji-only, e.g. "🐻"
     let selected: String?
-    let revealWord: Bool
     let locked: Bool
+    var fadedChoice: String? = nil
     let action: (String) -> Void
 
+    private var displayLetter: String {
+        let trimmed = letter.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty ? "?" : trimmed.uppercased()
+    }
+
     var body: some View {
-        HStack(spacing: 12) {
-            ForEach(choices, id: \.self) { choice in
-                SoundChoiceCard(
-                    raw: choice,
-                    isSelected: selected == choice,
-                    revealWord: revealWord,
-                    locked: locked
-                ) { action(choice) }
+        VStack(spacing: 22) {
+            Text(displayLetter)
+                .font(.system(size: 78, weight: .heavy, design: .rounded))
+                .foregroundStyle(DS.Color.accent)
+                .frame(width: 132, height: 132)
+                .background(DS.Color.accentSoft.opacity(0.6))
+                .clipShape(.rect(cornerRadius: 28))
+                .shadow(color: DS.Color.accent.opacity(0.18), radius: 10, y: 4)
+
+            HStack(spacing: 12) {
+                ForEach(choices, id: \.self) { choice in
+                    EmojiSoundChoiceCard(
+                        emoji: choice,
+                        isSelected: selected == choice,
+                        faded: fadedChoice == choice,
+                        locked: locked
+                    ) { action(choice) }
+                }
             }
         }
     }
 }
 
-struct SoundChoiceCard: View {
-    let raw: String
+struct EmojiSoundChoiceCard: View {
+    let emoji: String
     let isSelected: Bool
-    let revealWord: Bool
+    let faded: Bool
     let locked: Bool
     let action: () -> Void
 
     @State private var bounce = false
 
-    private var emoji: String { raw.split(separator: " ").first.map(String.init) ?? raw }
-    private var word: String { raw.split(separator: " ").dropFirst().joined(separator: " ") }
-
     var body: some View {
-        VStack(spacing: 10) {
-            Text(emoji).font(.system(size: 50))
-
-            Button {
-                SpeechPlayer.shared.speak(word.isEmpty ? raw : word)
-            } label: {
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.system(size: 15, weight: .heavy))
-                    .foregroundStyle(.white)
-                    .frame(width: 40, height: 40)
-                    .background(DS.Color.accent)
-                    .clipShape(.circle)
-                    .shadow(color: DS.Color.accent.opacity(0.4), radius: 6, y: 2)
+        Text(emoji)
+            .font(.system(size: 52))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+            .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+            .clipShape(.rect(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isSelected ? DS.Color.accent : Color.clear, lineWidth: 2.5)
+            )
+            .shadow(
+                color: isSelected ? DS.Color.accent.opacity(0.45) : DS.Color.accent.opacity(0.18),
+                radius: isSelected ? 14 : 9,
+                y: 3
+            )
+            .opacity(faded ? 0.28 : 1)
+            .scaleEffect(bounce ? 1.1 : (isSelected ? 1.04 : 1.0))
+            .contentShape(.rect)
+            .onTapGesture {
+                guard !locked else { return }
+                withAnimation(.spring(response: 0.16, dampingFraction: 0.45)) { bounce = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+                    withAnimation(.spring(response: 0.26, dampingFraction: 0.6)) { bounce = false }
+                }
+                action()
             }
-            .buttonStyle(.plain)
-            .disabled(locked)
-
-            Text(revealWord ? word : "tap to hear")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundStyle(revealWord ? DS.Color.textPrimary : DS.Color.textSecondary)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(Color(red: 0.996, green: 0.994, blue: 0.992))
-        .clipShape(.rect(cornerRadius: 20))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(isSelected ? DS.Color.accent : Color.clear, lineWidth: 2.5)
-        )
-        .shadow(
-            color: isSelected ? DS.Color.accent.opacity(0.45) : DS.Color.accent.opacity(0.18),
-            radius: isSelected ? 14 : 9,
-            y: 3
-        )
-        .scaleEffect(bounce ? 1.08 : (isSelected ? 1.03 : 1.0))
-        .contentShape(.rect)
-        .onTapGesture {
-            guard !locked else { return }
-            withAnimation(.spring(response: 0.16, dampingFraction: 0.45)) { bounce = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
-                withAnimation(.spring(response: 0.26, dampingFraction: 0.6)) { bounce = false }
-            }
-            action()
-        }
+            .animation(.easeInOut(duration: 0.3), value: faded)
     }
 }
 
@@ -1209,6 +1373,7 @@ struct NumberComparisonCard: View {
     let right: String
     let selected: String?
     let locked: Bool
+    var fadedChoice: String? = nil
     let action: (String) -> Void
 
     var body: some View {
@@ -1254,7 +1419,311 @@ struct NumberComparisonCard: View {
         }
         .buttonStyle(.plain)
         .disabled(locked)
+        .opacity(fadedChoice == value ? 0.28 : 1)
         .scaleEffect(revealScale(for: value) * (isSelected ? 1.03 : 1.0))
         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: selected)
+        .animation(.easeInOut(duration: 0.3), value: fadedChoice)
+    }
+}
+
+// MARK: - Memory Match Card (flip-card pairs)
+
+/// A grid of face-down cards. Tap two to flip; matching pairs stay up. When all
+/// pairs are found the question is complete. Great for uppercase↔lowercase or
+/// word↔picture matching.
+struct MemoryMatchCard: View {
+    let pairs: [(String, String)]   // (front, back) — each side becomes one card
+    let locked: Bool
+    let onComplete: () -> Void
+
+    private struct Card: Identifiable {
+        let id = UUID()
+        let label: String
+        let pairKey: Int            // cards sharing a pairKey are a match
+    }
+
+    @State private var cards: [Card] = []
+    @State private var flipped: Set<UUID> = []
+    @State private var matched: Set<UUID> = []
+    @State private var busy: Bool = false
+    @State private var wiggle: UUID? = nil
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 10), count: min(max(cards.count / 2, 2), 4))
+    }
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 10) {
+            ForEach(cards) { card in
+                cardView(card)
+            }
+        }
+        .onAppear(perform: setup)
+    }
+
+    private func setup() {
+        guard cards.isEmpty else { return }
+        var built: [Card] = []
+        for (i, pair) in pairs.enumerated() {
+            built.append(Card(label: pair.0, pairKey: i))
+            built.append(Card(label: pair.1, pairKey: i))
+        }
+        var rng = SeededRNG(UInt64(pairs.count + 7))
+        cards = built.shuffled(using: &rng)
+    }
+
+    private func cardView(_ card: Card) -> some View {
+        let isUp = flipped.contains(card.id) || matched.contains(card.id)
+        let isMatched = matched.contains(card.id)
+        return Button {
+            tap(card)
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(isUp ? Color(red: 0.996, green: 0.994, blue: 0.992) : DS.Color.accent)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(isMatched ? DS.Color.accent : Color.clear, lineWidth: 2.5)
+                    )
+                    .shadow(color: isUp ? DS.Color.accent.opacity(0.25) : Color.black.opacity(0.06), radius: 6, y: 2)
+                if isUp {
+                    Text(card.label)
+                        .font(.system(size: 30, weight: .heavy, design: .rounded))
+                        .foregroundStyle(DS.Color.textPrimary)
+                } else {
+                    Image(systemName: "questionmark")
+                        .font(.system(size: 24, weight: .heavy))
+                        .foregroundStyle(.white.opacity(0.9))
+                }
+            }
+            .frame(height: 70)
+            .opacity(isMatched ? 0.55 : 1)
+            .scaleEffect(wiggle == card.id ? 1.08 : 1.0)
+            .rotation3DEffect(.degrees(isUp ? 0 : 180), axis: (x: 0, y: 1, z: 0))
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isUp)
+        }
+        .buttonStyle(.plain)
+        .disabled(locked || isMatched)
+    }
+
+    private func tap(_ card: Card) {
+        guard !locked, !busy, !matched.contains(card.id), !flipped.contains(card.id) else { return }
+        flipped.insert(card.id)
+        let open = cards.filter { flipped.contains($0.id) && !matched.contains($0.id) }
+        guard open.count == 2 else { return }
+        busy = true
+        let isMatch = open[0].pairKey == open[1].pairKey
+        if isMatch {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                withAnimation(.spring(duration: 0.3)) {
+                    matched.formUnion(open.map(\.id))
+                    flipped.subtract(open.map(\.id))
+                }
+                busy = false
+                if matched.count == cards.count { onComplete() }
+            }
+        } else {
+            wiggle = open[1].id
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                withAnimation(.spring(duration: 0.3)) { flipped.subtract(open.map(\.id)) }
+                wiggle = nil
+                busy = false
+            }
+        }
+    }
+}
+
+// MARK: - Sort Buckets Card (multi-item drag-to-sort)
+
+/// Several items must each be placed into the correct bucket. Tap an item to
+/// pick it up, then tap a bucket to drop it (tap a placed item to return it).
+/// The question is answered only once every item is placed.
+struct SortBucketsCard: View {
+    let buckets: [String]
+    let items: [(label: String, bucket: String)]
+    let correct: String                 // value to report when all placements are right
+    let locked: Bool
+    let report: (String?) -> Void
+
+    @State private var placement: [String: String] = [:]   // label -> chosen bucket
+    @State private var picked: String? = nil
+
+    private var unplaced: [String] { items.map(\.label).filter { placement[$0] == nil } }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            // Tray of items still to place
+            if !unplaced.isEmpty {
+                FlowChips(items: unplaced, highlighted: picked) { label in
+                    guard !locked else { return }
+                    withAnimation(.spring(duration: 0.2)) {
+                        picked = (picked == label) ? nil : label
+                    }
+                }
+            } else {
+                Text("All sorted! Tap Check.")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(DS.Color.accent)
+            }
+
+            HStack(alignment: .top, spacing: 12) {
+                ForEach(buckets, id: \.self) { bucket in
+                    bucketColumn(bucket)
+                }
+            }
+        }
+    }
+
+    private func bucketColumn(_ bucket: String) -> some View {
+        let placed = items.map(\.label).filter { placement[$0] == bucket }
+        return VStack(spacing: 8) {
+            Text(bucket)
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(DS.Color.textPrimary)
+            VStack(spacing: 6) {
+                ForEach(placed, id: \.self) { label in
+                    Text(label)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.Color.textPrimary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .clipShape(.rect(cornerRadius: 12))
+                        .shadow(color: DS.Color.accent.opacity(0.18), radius: 4, y: 1)
+                        .onTapGesture {
+                            guard !locked else { return }
+                            withAnimation(.spring(duration: 0.2)) { placement[label] = nil; report(currentAnswer()) }
+                        }
+                }
+                if placed.isEmpty {
+                    Text(" ")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .padding(.vertical, 8)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .padding(10)
+            .background(DS.Color.accentSoft.opacity(0.35))
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(picked != nil ? DS.Color.accent : Color.clear, style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
+            )
+        }
+        .contentShape(.rect)
+        .onTapGesture {
+            guard !locked, let label = picked else { return }
+            withAnimation(.spring(duration: 0.2)) {
+                placement[label] = bucket
+                picked = nil
+                report(currentAnswer())
+            }
+        }
+    }
+
+    /// nil until every item is placed; then `correct` if all correct, else a
+    /// sentinel that will be marked wrong.
+    private func currentAnswer() -> String? {
+        guard placement.count == items.count else { return nil }
+        let allRight = items.allSatisfy { placement[$0.label] == $0.bucket }
+        return allRight ? correct : "__unsorted__"
+    }
+}
+
+/// Simple wrapping chip row used by the sort tray.
+struct FlowChips: View {
+    let items: [String]
+    let highlighted: String?
+    let action: (String) -> Void
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 70), spacing: 10)], spacing: 10) {
+            ForEach(items, id: \.self) { item in
+                Button { action(item) } label: {
+                    Text(item)
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .foregroundStyle(DS.Color.textPrimary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+                        .clipShape(.rect(cornerRadius: 14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(highlighted == item ? DS.Color.accent : Color.clear, lineWidth: 2.5)
+                        )
+                        .shadow(color: highlighted == item ? DS.Color.accent.opacity(0.4) : DS.Color.accent.opacity(0.18), radius: highlighted == item ? 12 : 7, y: 2)
+                        .scaleEffect(highlighted == item ? 1.06 : 1.0)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .animation(.spring(response: 0.25, dampingFraction: 0.6), value: highlighted)
+    }
+}
+
+// MARK: - Timed Bonus Card (countdown ring)
+
+/// A multiple-choice question wrapped in a countdown ring. Answering before the
+/// ring empties lights a bonus star; running out of time has no penalty.
+struct TimedBonusCard: View {
+    let choices: [String]
+    let selected: String?
+    let locked: Bool
+    let seconds: Double
+    let questionKey: String
+    var fadedChoice: String? = nil
+    let action: (String) -> Void
+
+    @State private var progress: CGFloat = 1.0
+    @State private var earnedBonus: Bool = false
+    @State private var timedOut: Bool = false
+
+    var body: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .stroke(DS.Color.accentSoft, lineWidth: 8)
+                    .frame(width: 84, height: 84)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(
+                        timedOut ? DS.Color.textTertiary : DS.Color.accent,
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 84, height: 84)
+                Image(systemName: earnedBonus ? "star.fill" : (timedOut ? "hourglass" : "bolt.fill"))
+                    .font(.system(size: 26, weight: .heavy))
+                    .foregroundStyle(earnedBonus ? Color(red: 1.0, green: 0.78, blue: 0.10) : DS.Color.accent)
+                    .scaleEffect(earnedBonus ? 1.15 : 1.0)
+            }
+            Text(earnedBonus ? "Bonus earned! ⭐" : (timedOut ? "Time's up — still counts!" : "Answer fast for a bonus!"))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(earnedBonus ? Color(red: 0.9, green: 0.6, blue: 0.0) : DS.Color.textSecondary)
+
+            FlowRow(items: choices, selected: selected, locked: locked, fadedChoice: fadedChoice) { item in
+                guard !locked else { return }
+                if progress > 0 && !timedOut { earnedBonus = true }
+                action(item)
+            }
+            .environment(\.choiceStyle, .number)
+        }
+        .onAppear {
+            progress = 1.0
+            earnedBonus = false
+            timedOut = false
+            withAnimation(.linear(duration: seconds)) { progress = 0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                if selected == nil { timedOut = true }
+            }
+        }
+        .onChange(of: questionKey) { _, _ in
+            progress = 1.0
+            earnedBonus = false
+            timedOut = false
+            withAnimation(.linear(duration: seconds)) { progress = 0 }
+        }
     }
 }
