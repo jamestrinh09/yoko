@@ -211,14 +211,14 @@ struct QuestionRenderer: View {
             TenFrameCard(filled: int(content["filled"]), need: int(content["empty"]), locked: isLocked) { selectedAnswer = $0 }
 
         case "multiplication_arrays":
-            // Build-the-array: tap + to add rows/columns up to the target, then
-            // confirm the count with the choices below.
+            // Passive visual: the array fades in row by row, then the child picks
+            // the total from the multiple-choice row below.
             ArrayBuilderCard(rows: int(content["rows"]), columns: int(content["columns"]), item: content["item"] ?? "●")
 
         case "division_as_sharing":
-            // Tap-to-distribute: each tap sends one item round-robin into a bucket
-            // until all are shared evenly, which answers the question.
-            DivisionShareCard(total: totalObjects(content["objects"]), buckets: int(content["buckets"]), item: objectEmoji(content["objects"]), locked: isLocked) { selectedAnswer = $0 }
+            // Passive visual: items animate evenly into the bowls round-robin, then
+            // the child picks how many are in each group from the choices below.
+            DivisionShareCard(total: totalObjects(content["objects"]), buckets: int(content["buckets"]), item: objectEmoji(content["objects"]))
 
         case "pattern_recognition":
             PatternRowCard(sequence: visualSequence)
@@ -551,7 +551,7 @@ struct QuestionRenderer: View {
         // division_as_sharing remains self-answering (distributing reports it).
         let visualWithSeparateChoices: Set<String> = [
             "counting_objects", "addition_by_counting", "subtraction_by_taking_away",
-            "multiplication_arrays", "make_ten",
+            "multiplication_arrays", "division_as_sharing", "make_ten",
             "pattern_recognition", "fractions", "telling_time", "reading_comprehension"
         ]
         return visualWithSeparateChoices.contains(template) && choices.count > 1
@@ -733,8 +733,11 @@ struct FlowRow: View {
                         .font(font)
                         .foregroundStyle(DS.Color.textPrimary)
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.55)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, minHeight: height)
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(
                             selected == item
@@ -962,22 +965,19 @@ struct TenFrameCard: View {
     }
 }
 
-/// Build-the-array: the child taps + / − to add rows and columns up to the
-/// target dimensions, watching the product grow, before confirming the count.
+/// Auto-revealing array: the rows fade/scale in one at a time so the child
+/// watches the array fill up, then picks the total from the multiple-choice row
+/// below. This is a passive visual — there are no steppers to build it.
 struct ArrayBuilderCard: View {
     let rows: Int
     let columns: Int
     let item: String
 
-    @State private var builtRows: Int = 1
-    @State private var builtCols: Int = 1
+    @State private var shownRows: Int = 0
 
     private var targetRows: Int { max(rows, 1) }
     private var targetCols: Int { max(columns, 1) }
-    private var isComplete: Bool { builtRows == targetRows && builtCols == targetCols }
 
-    /// Dot size is fixed to the TARGET dimensions so the grid doesn't jump while
-    /// the child builds it up.
     private var itemSize: CGFloat {
         switch max(targetRows, targetCols) {
         case 0...4: return 30
@@ -989,124 +989,86 @@ struct ArrayBuilderCard: View {
     private var gridSpacing: CGFloat { max(targetRows, targetCols) >= 7 ? 5 : 8 }
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             VStack(spacing: gridSpacing) {
-                ForEach(0..<builtRows, id: \.self) { _ in
+                ForEach(0..<targetRows, id: \.self) { r in
                     HStack(spacing: gridSpacing) {
-                        ForEach(0..<builtCols, id: \.self) { _ in
+                        ForEach(0..<targetCols, id: \.self) { _ in
                             Text(item).font(.system(size: itemSize))
-                                .transition(.scale.combined(with: .opacity))
                         }
                     }
+                    .opacity(r < shownRows ? 1 : 0)
+                    .scaleEffect(r < shownRows ? 1 : 0.6)
                 }
             }
             .frame(minHeight: itemSize + 8)
 
-            HStack(spacing: 14) {
-                stepper(label: "Rows", value: builtRows, target: targetRows) { builtRows = $0 }
-                stepper(label: "Columns", value: builtCols, target: targetCols) { builtCols = $0 }
-            }
-
-            Text("\(builtRows) × \(builtCols) = \(builtRows * builtCols)")
-                .font(.system(size: 18, weight: .heavy, design: .rounded))
-                .foregroundStyle(isComplete ? DS.Color.accent : DS.Color.textSecondary)
-                .padding(.top, 2)
-        }
-    }
-
-    private func stepper(label: String, value: Int, target: Int, set: @escaping (Int) -> Void) -> some View {
-        VStack(spacing: 6) {
-            Text(label)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+            Text("\(targetRows) rows of \(targetCols)")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(DS.Color.textSecondary)
-            HStack(spacing: 10) {
-                stepButton("minus") { if value > 1 { withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) { set(value - 1) } } }
-                Text("\(value)")
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundStyle(DS.Color.textPrimary)
-                    .frame(minWidth: 24)
-                stepButton("plus") { if value < target { withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) { set(value + 1) } } }
-            }
+                .opacity(shownRows >= targetRows ? 1 : 0)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color(red: 0.996, green: 0.994, blue: 0.992))
-        .clipShape(.rect(cornerRadius: 16))
-        .shadow(color: DS.Color.accent.opacity(0.12), radius: 6, y: 2)
+        .onAppear { revealRows() }
     }
 
-    private func stepButton(_ system: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: system)
-                .font(.system(size: 14, weight: .heavy))
-                .foregroundStyle(.white)
-                .frame(width: 30, height: 30)
-                .background(DS.Color.accent)
-                .clipShape(.circle)
+    private func revealRows() {
+        guard shownRows == 0 else { return }
+        for r in 0..<targetRows {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35 + Double(r) * 0.4) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                    shownRows = r + 1
+                }
+            }
         }
-        .buttonStyle(.plain)
     }
 }
 
-/// Tap-to-distribute division: tap items in the tray to send them one at a time,
-/// round-robin, into the bowls until every item is shared evenly. Completing an
-/// even distribution reports the per-bowl count as the answer.
+/// Auto-distributing division: the items animate one at a time, round-robin,
+/// into the bowls until every group is shared evenly. This is a passive visual
+/// — the child reads the result and picks the per-group count from the separate
+/// multiple-choice row below.
 struct DivisionShareCard: View {
     let total: Int
     let buckets: Int
     let item: String
-    let locked: Bool
-    let report: (String?) -> Void
 
     @State private var placed: [Int] = []
-    @State private var remaining: Int = -1   // -1 = not yet initialized
+    @State private var dropped: Int = 0
+    @State private var started: Bool = false
 
     private var bucketCount: Int { max(buckets, 1) }
-    private var perGroup: Int { total / bucketCount }
-    private var nextBucket: Int { (total - remaining) % bucketCount }
+    private var remaining: Int { max(total - dropped, 0) }
 
     var body: some View {
         VStack(spacing: 16) {
-            if remaining > 0 {
-                VStack(spacing: 8) {
-                    Text("Tap an item to share it — \(remaining) left")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(DS.Color.accent)
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 8)], spacing: 8) {
-                        ForEach(0..<max(remaining, 0), id: \.self) { _ in
-                            Button { shareOne() } label: {
-                                Text(item)
-                                    .font(.system(size: 30))
-                                    .frame(width: 44, height: 44)
-                                    .background(Color(red: 0.996, green: 0.994, blue: 0.992))
-                                    .clipShape(.circle)
-                                    .shadow(color: DS.Color.accent.opacity(0.18), radius: 4, y: 1)
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(locked)
-                        }
-                    }
+            Text(remaining > 0 ? "Sharing them out…" : "Shared evenly into \(bucketCount) groups!")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(DS.Color.accent)
+
+            // Tray of items still waiting to be shared.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 40), spacing: 8)], spacing: 8) {
+                ForEach(0..<max(remaining, 0), id: \.self) { _ in
+                    Text(item)
+                        .font(.system(size: 26))
+                        .frame(width: 40, height: 40)
+                        .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+                        .clipShape(.circle)
+                        .shadow(color: DS.Color.accent.opacity(0.16), radius: 4, y: 1)
+                        .transition(.scale.combined(with: .opacity))
                 }
-            } else if remaining == 0 {
-                Text("All shared evenly! Tap Check.")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(DS.Color.accent)
             }
+            .frame(minHeight: remaining > 0 ? 40 : 0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: remaining)
 
             HStack(alignment: .top, spacing: 10) {
                 ForEach(0..<bucketCount, id: \.self) { b in bowl(b) }
             }
         }
-        .onAppear {
-            guard remaining == -1 else { return }
-            placed = Array(repeating: 0, count: bucketCount)
-            remaining = total
-        }
+        .onAppear { startSharing() }
     }
 
     private func bowl(_ b: Int) -> some View {
         let count = b < placed.count ? placed[b] : 0
-        let isNext = remaining > 0 && b == nextBucket
         return VStack(spacing: 6) {
             Text("🥣").font(.system(size: 34))
             Text(String(repeating: item, count: count))
@@ -1118,29 +1080,26 @@ struct DivisionShareCard: View {
         .padding(10)
         .background(Color(red: 0.996, green: 0.994, blue: 0.992))
         .clipShape(.rect(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(isNext ? DS.Color.accent : Color.clear, style: StrokeStyle(lineWidth: 2, dash: [6, 5]))
-        )
         .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 1)
     }
 
-    private func shareOne() {
-        guard !locked, remaining > 0 else { return }
-        let target = nextBucket
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-            if target < placed.count { placed[target] += 1 }
-            remaining -= 1
-        }
-        report(currentAnswer())
+    private func startSharing() {
+        guard !started else { return }
+        started = true
+        placed = Array(repeating: 0, count: bucketCount)
+        scheduleNext(after: 0.5)
     }
 
-    /// nil until everything is placed; then the per-bowl count when the split is
-    /// even (always, via round-robin), else a sentinel that will be marked wrong.
-    private func currentAnswer() -> String? {
-        guard remaining == 0 else { return nil }
-        let even = placed.allSatisfy { $0 == placed.first }
-        return even ? String(perGroup) : "__unsorted__"
+    private func scheduleNext(after delay: Double) {
+        guard dropped < total else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            let target = dropped % bucketCount
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                if target < placed.count { placed[target] += 1 }
+                dropped += 1
+            }
+            scheduleNext(after: 0.45)
+        }
     }
 }
 

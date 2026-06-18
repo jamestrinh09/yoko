@@ -296,14 +296,17 @@ enum CurriculumGenerator {
     private static let foodEmojis = ["🍪","🍕","🥕","🧁","🌽","🍞"]
     private static let shapeEmojis = ["⭐","🔴","🔵","🟢","🟡","🟣"]
 
-    private static func mcChoices(_ correct: Int, around: Int = 2, rng: inout SeededRNG) -> [String] {
+    private static func mcChoices(_ correct: Int, around: Int = 2, exclude: Set<Int> = [], rng: inout SeededRNG) -> [String] {
         var pool = Set<Int>()
         pool.insert(correct)
         var attempts = 0
-        while pool.count < 3 && attempts < 20 {
+        while pool.count < 3 && attempts < 30 {
             let delta = 1 + Int(rng.next() % UInt64(around + 1))
             let sign = Int(rng.next() % 2) == 0 ? -1 : 1
             let v = max(0, correct + sign * delta)
+            // Skip values the question itself shows (operands) so distractors
+            // can't just mirror numbers already on screen.
+            if v != correct && exclude.contains(v) { attempts += 1; continue }
             pool.insert(v)
             attempts += 1
         }
@@ -385,7 +388,7 @@ enum CurriculumGenerator {
                   prompt: "\(a) take away \(b). How many are left?",
                   directions: "Count what is not faded.",
                   source: "food_pack", content: content,
-                  choices: mcChoices(diff, around: 3, rng: &rng), correct: String(diff), grade: band)
+                  choices: mcChoices(diff, around: 3, exclude: [a, b], rng: &rng), correct: String(diff), grade: band)
     }
 
     private static func genMissingNumber(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
