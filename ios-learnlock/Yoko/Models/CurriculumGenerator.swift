@@ -398,7 +398,7 @@ enum CurriculumGenerator {
         let choices = mcChoices(missing, around: 3, rng: &rng)
         return nq(subject: .math, skill: "missing number equations", component: "Blank Slot Builder", template: "Missing Number Equation",
                   prompt: equation,
-                  directions: "Drag the missing number into the blank.",
+                  directions: "Tap the number that fills the blank.",
                   source: "symbol_support_pack",
                   content: ["equation": equation, "chips": choices.joined(separator: ",")],
                   choices: choices, correct: String(missing), grade: band)
@@ -603,18 +603,43 @@ enum CurriculumGenerator {
                   choices: choices, correct: correct, grade: band)
     }
 
+    /// Child-friendly, easy-to-count objects used for the quantity card.
+    private static let compareObjects: [String] = [
+        "🍎", "⭐️", "🐱", "🐶", "⚽️", "🍦", "📚", "✏️", "🌸", "🐟", "🚗", "🎈"
+    ]
+
     private static func genCompare(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        let cap = band == .grade1 ? 20 : band == .grade2 ? 100 : 999
-        let a = 1 + Int(rng.next() % UInt64(cap))
-        var b = 1 + Int(rng.next() % UInt64(cap))
-        if b == a { b = a + 1 }
-        let bigger = max(a, b)
+        // A numeral vs. a counted group of objects. Keep both quantities close
+        // (differ by 1–2) and small enough to actually count so the child must
+        // compare a number against a visual quantity rather than two numerals.
+        let base: Int
+        switch band {
+        case .kindergarten: base = 5 + Int(rng.next() % 4)   // 5...8
+        case .grade1:       base = 6 + Int(rng.next() % 6)   // 6...11
+        case .grade2:       base = 8 + Int(rng.next() % 7)   // 8...14
+        case .grade3:       base = 9 + Int(rng.next() % 7)   // 9...15
+        }
+        let gap = 1 + Int(rng.next() % 2)                    // 1 or 2
+        let other = Int(rng.next() % 2) == 0 ? base + gap : max(2, base - gap)
+        let numberFirst = Int(rng.next() % 2) == 0
+        let numberValue = numberFirst ? base : other
+        let objectCount = numberFirst ? other : base
+        let bigger = max(numberValue, objectCount)
+        let emoji = compareObjects.randomElement(using: &rng) ?? "🍎"
+        let prompt = ["Which is greater?", "Which is larger?", "Which has more?", "Which amount is bigger?"]
+            .randomElement(using: &rng) ?? "Which is greater?"
         return nq(subject: .math, skill: "compare numbers", component: "Comparison Card Pair", template: "Compare Numbers",
-                  prompt: "Which number is bigger: \(a) or \(b)?",
-                  directions: "Tap the larger number.",
+                  prompt: prompt,
+                  directions: "Count carefully before choosing.",
                   source: "symbol_support_pack",
-                  content: ["left": String(a), "right": String(b)],
-                  choices: [String(a), String(b)], correct: String(bigger), grade: band)
+                  content: [
+                    "number": String(numberValue),
+                    "objectEmoji": emoji,
+                    "objectCount": String(objectCount),
+                    "numberSide": numberFirst ? "left" : "right"
+                  ],
+                  choices: [String(numberValue), String(objectCount)],
+                  correct: String(bigger), grade: band)
     }
 
     private static func genTimedBonus(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {

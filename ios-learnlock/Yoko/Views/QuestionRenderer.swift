@@ -179,12 +179,12 @@ struct QuestionRenderer: View {
             tappableComparison
 
         case "compare_numbers":
-            // Tappable number pair with a progressive reveal: after a choice is
-            // made the larger value grows and the smaller shrinks, reinforcing
-            // "bigger" visually instead of only marking right/wrong.
+            // Compare a numeral against a counted group of objects (or two
+            // numerals for legacy questions). After a choice is made the greater
+            // quantity grows and the smaller shrinks, reinforcing "greater".
             NumberComparisonCard(
-                left: content["left"] ?? choices.first ?? "",
-                right: content["right"] ?? choices.last ?? "",
+                left: comparisonSide(forLeft: true),
+                right: comparisonSide(forLeft: false),
                 selected: selectedAnswer,
                 locked: isLocked,
                 fadedChoice: hintFadedChoice
@@ -490,6 +490,26 @@ struct QuestionRenderer: View {
         }
     }
 
+    /// Builds one side of the number-comparison card. Mixed questions place a
+    /// numeral on `numberSide` and a counted object group on the other side;
+    /// legacy questions fall back to two numerals via `left`/`right`.
+    private func comparisonSide(forLeft: Bool) -> NumberComparisonCard.Side {
+        let sideKey = forLeft ? "left" : "right"
+        if let emoji = content["objectEmoji"], !emoji.isEmpty,
+           let number = Int(content["number"] ?? ""),
+           let objectCount = Int(content["objectCount"] ?? "") {
+            let numberSide = content["numberSide"] ?? "left"
+            if sideKey == numberSide {
+                return .init(value: number, emoji: nil)
+            } else {
+                return .init(value: objectCount, emoji: emoji)
+            }
+        }
+        // Legacy: two numerals stored under left/right.
+        let raw = content[sideKey] ?? (forLeft ? choices.first : choices.last) ?? ""
+        return .init(value: Int(raw) ?? 0, emoji: nil)
+    }
+
     private func visualTapGrid(items: [String], style: ChoiceStyle) -> some View {
         FlowRow(items: items, selected: selectedAnswer, locked: isLocked, fadedChoice: hintFadedChoice) { item in
             guard !isLocked else { return }
@@ -657,15 +677,15 @@ struct QuestionHintButton: View {
                 state.glow = false
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 13, weight: .heavy))
+                    .font(.system(size: 11, weight: .heavy))
                 Text("Hint!")
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
             }
             .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
             .background(
                 state.revealed
                     ? DS.Color.accent
@@ -927,12 +947,12 @@ struct TenFrameCard: View {
             report(added.isEmpty ? nil : String(added.count))
         } label: {
             Circle()
-                .fill(isFilled ? DS.Color.accent : DS.Color.accentSoft)
+                .fill(isFilled ? DS.Color.accent : DS.Color.accentMid)
                 .frame(width: 42, height: 42)
                 .overlay(
                     Circle().stroke(
-                        DS.Color.accent.opacity(isPrefilled ? 0.15 : (isAdded ? 0 : 0.55)),
-                        lineWidth: 2
+                        DS.Color.accent.opacity(isFilled ? 0 : 0.8),
+                        lineWidth: 2.5
                     )
                 )
                 .scaleEffect(isAdded ? 1.08 : 1.0)
@@ -1197,12 +1217,19 @@ struct ClockCard: View {
                 .stroke(DS.Color.border, lineWidth: 6)
                 .frame(width: 150, height: 150)
 
+            // Hour numerals positioned around the dial. Each numeral sits at the
+            // top of a clock-sized frame that is rotated into place, then the
+            // numeral itself is counter-rotated so it always reads upright.
             ForEach(1...12, id: \.self) { n in
-                Text("\(n)")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .offset(y: -60)
-                    .rotationEffect(.degrees(Double(n) * 30))
-                    .rotationEffect(.degrees(Double(n) * -30))
+                VStack(spacing: 0) {
+                    Text("\(n)")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(DS.Color.textSecondary)
+                        .rotationEffect(.degrees(Double(n) * -30))
+                    Spacer(minLength: 0)
+                }
+                .frame(width: 126, height: 126)
+                .rotationEffect(.degrees(Double(n) * 30))
             }
 
             Rectangle()
@@ -1823,60 +1850,92 @@ struct EmojiSoundChoiceCard: View {
 // MARK: - Number Comparison Card (progressive reveal)
 
 struct NumberComparisonCard: View {
-    let left: String
-    let right: String
+    /// One comparison card: either a large numeral (`emoji == nil`) or a counted
+    /// grid of objects. `value` is the underlying quantity and the choice key.
+    struct Side {
+        let value: Int
+        let emoji: String?
+    }
+
+    let left: Side
+    let right: Side
     let selected: String?
     let locked: Bool
     var fadedChoice: String? = nil
     let action: (String) -> Void
 
+    private var greater: Int { max(left.value, right.value) }
+
     var body: some View {
-        HStack(spacing: 14) {
-            numberCard(left)
+        HStack(alignment: .center, spacing: 12) {
+            sideCard(left)
             Text("or")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(DS.Color.accent)
-            numberCard(right)
+            sideCard(right)
         }
     }
 
-    /// After any selection, the larger value grows and the smaller shrinks so
-    /// the child sees "bigger" reinforced, not just a right/wrong mark.
-    private func revealScale(for value: String) -> CGFloat {
-        guard selected != nil,
-              let l = Int(left), let r = Int(right),
-              let mine = Int(value) else { return 1.0 }
-        return mine == max(l, r) ? 1.18 : 0.82
+    /// After any selection, the greater quantity grows and the smaller shrinks
+    /// so the child sees "greater" reinforced, not just a right/wrong mark.
+    private func revealScale(for value: Int) -> CGFloat {
+        guard selected != nil else { return 1.0 }
+        return value == greater ? 1.12 : 0.88
     }
 
-    private func numberCard(_ value: String) -> some View {
-        let isSelected = selected == value
+    private func sideCard(_ side: Side) -> some View {
+        let key = String(side.value)
+        let isSelected = selected == key
         return Button {
             guard !locked else { return }
-            action(value)
+            action(key)
         } label: {
-            Text(value)
-                .font(.system(size: 40, weight: .heavy, design: .rounded))
-                .foregroundStyle(DS.Color.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 96)
-                .background(Color(red: 0.996, green: 0.994, blue: 0.992))
-                .clipShape(.rect(cornerRadius: 20))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(isSelected ? DS.Color.accent : Color.clear, lineWidth: 2.5)
-                )
-                .shadow(
-                    color: isSelected ? DS.Color.accent.opacity(0.45) : DS.Color.accent.opacity(0.2),
-                    radius: isSelected ? 14 : 9,
-                    y: 3
-                )
+            Group {
+                if let emoji = side.emoji {
+                    objectGrid(emoji: emoji, count: side.value)
+                } else {
+                    Text(key)
+                        .font(.system(size: 46, weight: .heavy, design: .rounded))
+                        .foregroundStyle(DS.Color.textPrimary)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 140)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 10)
+            .background(Color(red: 0.996, green: 0.994, blue: 0.992))
+            .clipShape(.rect(cornerRadius: 22))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22)
+                    .stroke(isSelected ? DS.Color.accent : Color.clear, lineWidth: 2.5)
+            )
+            .shadow(
+                color: isSelected ? DS.Color.accent.opacity(0.45) : DS.Color.accent.opacity(0.2),
+                radius: isSelected ? 14 : 9,
+                y: 3
+            )
         }
         .buttonStyle(.plain)
         .disabled(locked)
-        .opacity(fadedChoice == value ? 0.28 : 1)
-        .scaleEffect(revealScale(for: value) * (isSelected ? 1.03 : 1.0))
+        .opacity(fadedChoice == key ? 0.28 : 1)
+        .scaleEffect(revealScale(for: side.value) * (isSelected ? 1.03 : 1.0))
         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: selected)
         .animation(.easeInOut(duration: 0.3), value: fadedChoice)
+    }
+
+    /// Objects laid out in a clean 2–4 column grid so the child must count them,
+    /// never a single ambiguous row.
+    private func objectGrid(emoji: String, count: Int) -> some View {
+        let cols = count <= 4 ? 2 : (count <= 9 ? 3 : 4)
+        let glyph: CGFloat = count > 12 ? 18 : (count > 6 ? 22 : 26)
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.fixed(glyph + 6), spacing: 6), count: cols),
+            spacing: 6
+        ) {
+            ForEach(0..<max(count, 1), id: \.self) { _ in
+                Text(emoji).font(.system(size: glyph))
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

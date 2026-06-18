@@ -219,7 +219,7 @@ nonisolated enum CurriculumSystem {
         // 4 — Grade 1: Missing Number Equation (4 + __ = 9)
         q(.math, "missing_eq_4_plus_blank", "missing number equations", "Blank Slot Builder", "Missing Number Equation",
           "4 + __ = 9",
-          "Drag the missing number into the blank.",
+          "Tap the number that fills the blank.",
           "symbol_support_pack",
           ["equation":"4 + __ = 9", "chips":"3,4,5"],
           ["3","4","5"], "5", .grade1),
@@ -290,8 +290,8 @@ nonisolated enum CurriculumSystem {
 
         // 13 — Grade 2: Compare Numbers (42 vs 24)
         q(.math, "compare_42_vs_24", "compare numbers", "Comparison Card Pair", "Compare Numbers",
-          "Which number is bigger: 42 or 24?",
-          "Tap the larger number.",
+          "Which is greater?",
+          "Count carefully before choosing.",
           "symbol_support_pack",
           ["left":"42", "right":"24"],
           ["42","24"], "42", .grade2),
@@ -307,7 +307,7 @@ nonisolated enum CurriculumSystem {
         // 15 — Grade 2: Missing Addend (larger, __ + 8 = 15)
         q(.math, "missing_eq_blank_plus8", "missing number equations", "Blank Slot Builder", "Missing Number Equation",
           "__ + 8 = 15",
-          "Drag the missing number into the blank.",
+          "Tap the number that fills the blank.",
           "symbol_support_pack",
           ["equation":"__ + 8 = 15", "chips":"5,6,7,8"],
           ["5","6","7","8"], "7", .grade2),
@@ -363,7 +363,7 @@ nonisolated enum CurriculumSystem {
         // 22 — Grade 3: Multiplication missing factor (__ × 6 = 18)
         q(.math, "missing_factor_blank_x6", "missing number equations", "Blank Slot Builder", "Missing Number Equation",
           "__ × 6 = 18",
-          "Drag the missing number.",
+          "Tap the number that fills the blank.",
           "symbol_support_pack",
           ["equation":"__ × 6 = 18", "chips":"2,3,4,6"],
           ["2","3","4","6"], "3", .grade3),
@@ -452,7 +452,7 @@ nonisolated enum CurriculumSystem {
 
         q(.math, "missing_eq_2_plus_blank_10", "missing number equations", "Blank Slot Builder", "Missing Number Equation",
           "2 + __ = 10",
-          "Drag the missing number into the blank.",
+          "Tap the number that fills the blank.",
           "symbol_support_pack",
           ["equation":"2 + __ = 10", "chips":"6,7,8"],
           ["6","7","8"], "8", .grade1),
@@ -472,8 +472,8 @@ nonisolated enum CurriculumSystem {
           ["8","9","10"], "9", .grade1),
 
         q(.math, "compare_15_vs_9", "compare numbers", "Comparison Card Pair", "Compare Numbers",
-          "Which number is bigger: 15 or 9?",
-          "Tap the larger number.",
+          "Which is greater?",
+          "Count carefully before choosing.",
           "symbol_support_pack",
           ["left":"15", "right":"9"],
           ["15","9"], "15", .grade1),
@@ -487,8 +487,8 @@ nonisolated enum CurriculumSystem {
           ["45","50","55"], "50", .grade2),
 
         q(.math, "compare_67_vs_76", "compare numbers", "Comparison Card Pair", "Compare Numbers",
-          "Which number is bigger: 67 or 76?",
-          "Tap the larger number.",
+          "Which is greater?",
+          "Count carefully before choosing.",
           "symbol_support_pack",
           ["left":"67", "right":"76"],
           ["67","76"], "76", .grade2),
@@ -502,7 +502,7 @@ nonisolated enum CurriculumSystem {
 
         q(.math, "missing_addend_blank_plus6_14", "missing number equations", "Blank Slot Builder", "Missing Number Equation",
           "__ + 6 = 14",
-          "Drag the missing number into the blank.",
+          "Tap the number that fills the blank.",
           "symbol_support_pack",
           ["equation":"__ + 6 = 14", "chips":"6,7,8"],
           ["6","7","8"], "8", .grade2),
@@ -566,7 +566,7 @@ nonisolated enum CurriculumSystem {
 
         q(.math, "missing_factor_blank_x4_20", "missing number equations", "Blank Slot Builder", "Missing Number Equation",
           "__ × 4 = 20",
-          "Drag the missing number.",
+          "Tap the number that fills the blank.",
           "symbol_support_pack",
           ["equation":"__ × 4 = 20", "chips":"3,4,5"],
           ["3","4","5"], "5", .grade3),
