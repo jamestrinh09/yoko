@@ -118,7 +118,7 @@ struct LessonCompleteView: View {
 
     private var headline: some View {
         VStack(spacing: 6) {
-            Text("Lesson Complete!")
+            Text("App Unlocked!")
                 .font(.system(size: 28, weight: .heavy, design: .rounded))
                 .foregroundStyle(DS.Color.textPrimary)
             Text("\(result.correctCount) of \(result.totalQuestions) correct")

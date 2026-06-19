@@ -5,6 +5,7 @@
 
 import SwiftUI
 import FamilyControls
+import StoreKit
 
 struct LocksView: View {
     @Environment(AppStore.self) private var store
@@ -136,6 +137,7 @@ struct LocksView: View {
                 apply: { type, rule in
                     store.setLockRule(lock, type: type, rewardRule: rule)
                     presentToast(ruleToastMessage(name: lock.name, type: type, rewardRule: rule))
+                    requestReviewOnce()
                 }
             )
         }
@@ -158,6 +160,7 @@ struct LocksView: View {
                         selectionMode = false
                         selectedAppIds.removeAll()
                     }
+                    requestReviewOnce()
                 }
             )
         }
@@ -178,8 +181,24 @@ struct LocksView: View {
                 apply: { type, rule in
                     store.setLockRuleForAll(type: type, rewardRule: rule)
                     presentToast(bulkToastMessage(count: store.locks.count, type: type, rewardRule: rule))
+                    requestReviewOnce()
                 }
             )
+        }
+    }
+
+    /// Fires the native App Store review prompt the first time a parent picks a
+    /// lock rule in the Locks tab. Moved here from onboarding so it lands once the
+    /// parent has actually chosen apps and an unlock rule.
+    private func requestReviewOnce() {
+        let key = "didRequestLockRuleReview"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            if let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                SKStoreReviewController.requestReview(in: scene)
+            }
         }
     }
 

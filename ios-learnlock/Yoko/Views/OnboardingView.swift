@@ -6,7 +6,6 @@
 import SwiftUI
 import UserNotifications
 import FamilyControls
-import StoreKit
 
 struct OnboardingView: View {
     @Environment(AppStore.self) private var store
@@ -216,7 +215,7 @@ struct OnboardingView: View {
         case 13:
             PrimaryButton(label: "let's learn 🤩", action: nextStep)
         case 17:
-            PrimaryButton(label: "Continue", action: requestReviewThenNext)
+            PrimaryButton(label: "Continue", action: nextStep)
         case 18:
             PrimaryButton(label: "Use this rule", action: nextStep)
         case 19:
@@ -251,16 +250,6 @@ struct OnboardingView: View {
         withAnimation(.spring(duration: 0.35)) {
             step = min(step + 1, totalSteps)
         }
-    }
-
-    /// Triggers the native App Store review prompt before advancing past the
-    /// Lesson Completed step, then continues onboarding.
-    private func requestReviewThenNext() {
-        if let scene = UIApplication.shared.connectedScenes
-            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-            SKStoreReviewController.requestReview(in: scene)
-        }
-        nextStep()
     }
 
     private func validateAndNext4() {
@@ -800,7 +789,7 @@ struct OnboardingView: View {
 
     private func Step18() -> some View {
         VStack(alignment: .leading, spacing: 20) {
-            MascotGIF(url: GIFAssets.lockStanding, size: 190)
+            MascotGIF(url: GIFAssets.lockStanding, size: 219)
                 .frame(maxWidth: .infinity)
             Text("Set the Unlock Rule")
                 .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -959,7 +948,7 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 8)
                 .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 8)
-                .offset(y: -40)
+                .offset(y: -55)
 
             VStack(spacing: 10) {
                 Text("Turn on notifications")
@@ -973,7 +962,7 @@ struct OnboardingView: View {
                     .lineSpacing(4)
             }
             .padding(.horizontal, 8)
-            .offset(y: -70)
+            .offset(y: -95)
 
             VStack(spacing: 0) {
                 permissionRow(
@@ -1100,6 +1089,7 @@ struct DemoQuestionScreen: View {
     @State private var feedback: LessonPlayerView.Feedback = .none
     @State private var advanceTask: Task<Void, Never>?
     @State private var unscramble = UnscrambleState()
+    @State private var hint = QuestionHintState()
     @State private var contentOpacity: Double = 1
 
     enum DemoMascotMood { case happy, thinking, determined, excited, sad }
@@ -1269,7 +1259,8 @@ struct DemoQuestionScreen: View {
                     question: question,
                     selectedAnswer: $selected,
                     feedback: feedback,
-                    unscramble: unscramble
+                    unscramble: unscramble,
+                    hint: hint
                 )
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
@@ -1330,23 +1321,27 @@ struct DemoQuestionScreen: View {
     }
 
     private var keyProgressRow: some View {
-        HStack(spacing: 0) {
-            if unscramble.active {
-                UnscrambleBackButton(state: unscramble)
-                Spacer(minLength: 4)
-            }
-            HStack(spacing: 16) {
-                ForEach(0..<totalQuestions, id: \.self) { keyIndex in
-                    keyCircle(for: keyIndex)
-                }
-            }
-            if unscramble.active {
-                Spacer(minLength: 4)
-                UnscrambleHintButton(state: unscramble)
+        HStack(spacing: 16) {
+            ForEach(0..<totalQuestions, id: \.self) { keyIndex in
+                keyCircle(for: keyIndex)
             }
         }
         .frame(maxWidth: .infinity)
+        .overlay {
+            HStack(spacing: 0) {
+                if unscramble.active {
+                    UnscrambleBackButton(state: unscramble)
+                }
+                Spacer(minLength: 0)
+                if unscramble.active {
+                    UnscrambleHintButton(state: unscramble)
+                } else if hint.active {
+                    QuestionHintButton(state: hint)
+                }
+            }
+        }
         .animation(.spring(duration: 0.3), value: unscramble.active)
+        .animation(.spring(duration: 0.3), value: hint.active)
     }
 
     @ViewBuilder
@@ -2091,7 +2086,7 @@ struct CommitmentScreen: View {
 
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 18) {
-                            MascotGIF(url: GIFAssets.glasses, size: 146)
+                            MascotGIF(url: GIFAssets.glasses, size: 161)
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 2)
 

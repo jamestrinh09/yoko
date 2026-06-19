@@ -950,12 +950,12 @@ struct TenFrameCard: View {
             report(added.isEmpty ? nil : String(added.count))
         } label: {
             Circle()
-                .fill(isFilled ? DS.Color.accent : DS.Color.accentMid)
+                .fill(isFilled ? DS.Color.accent : Color.white)
                 .frame(width: 42, height: 42)
                 .overlay(
                     Circle().stroke(
-                        DS.Color.accent.opacity(isFilled ? 0 : 0.8),
-                        lineWidth: 2.5
+                        isFilled ? Color.clear : DS.Color.border,
+                        lineWidth: 2
                     )
                 )
                 .scaleEffect(isAdded ? 1.08 : 1.0)
@@ -1144,14 +1144,13 @@ struct FractionBarCard: View {
                 Rectangle()
                     .fill(i < filled ? DS.Color.accent : DS.Color.accentSoft)
                     .frame(height: 64)
+                    .overlay(
+                        Rectangle()
+                            .stroke(Color.black.opacity(0.55), lineWidth: 1.5)
+                    )
             }
         }
         .clipShape(.rect(cornerRadius: 16))
-        .overlay(
-            Text("\(filled)/\(parts)")
-                .font(.system(size: 28, weight: .heavy, design: .rounded))
-                .foregroundStyle(DS.Color.textPrimary)
-        )
     }
 }
 
@@ -2057,6 +2056,8 @@ struct SortBucketsCard: View {
                     Text(label)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(DS.Color.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
@@ -2065,14 +2066,30 @@ struct SortBucketsCard: View {
                         .shadow(color: DS.Color.accent.opacity(0.18), radius: 4, y: 1)
                         .onTapGesture {
                             guard !locked else { return }
-                            withAnimation(.spring(duration: 0.2)) { placement[label] = nil; report(currentAnswer()) }
+                            // If a word is currently picked, drop it into this
+                            // bucket instead of removing an already-placed word —
+                            // this avoids accidentally undoing the last placement.
+                            if let pickedLabel = picked {
+                                withAnimation(.spring(duration: 0.2)) {
+                                    placement[pickedLabel] = bucket
+                                    picked = nil
+                                    report(currentAnswer())
+                                }
+                            } else {
+                                withAnimation(.spring(duration: 0.2)) { placement[label] = nil; report(currentAnswer()) }
+                            }
                         }
                 }
-                if placed.isEmpty {
-                    Text(" ")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .padding(.vertical, 8)
-                }
+                // Always-present drop space below the placed words, so there is
+                // room to add another word without tapping an existing one.
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(DS.Color.accentSoft.opacity(0.45))
+                    .frame(height: 34)
+                    .overlay(
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .heavy))
+                            .foregroundStyle(DS.Color.accent.opacity(picked != nil ? 0.7 : 0.22))
+                    )
             }
             .frame(maxWidth: .infinity, minHeight: 56)
             .padding(10)
@@ -2109,13 +2126,22 @@ struct FlowChips: View {
     let highlighted: String?
     let action: (String) -> Void
 
+    /// Widen the chip cells when the longest word needs more room, so long words
+    /// like "happiness" stay on a single line instead of wrapping.
+    private var chipMinWidth: CGFloat {
+        let longest = items.map(\.count).max() ?? 4
+        return min(160, max(70, CGFloat(longest) * 13 + 28))
+    }
+
     var body: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 70), spacing: 10)], spacing: 10) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: chipMinWidth), spacing: 10)], spacing: 10) {
             ForEach(items, id: \.self) { item in
                 Button { action(item) } label: {
                     Text(item)
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundStyle(DS.Color.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity)

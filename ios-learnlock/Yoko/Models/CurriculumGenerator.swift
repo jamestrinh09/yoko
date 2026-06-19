@@ -442,11 +442,25 @@ enum CurriculumGenerator {
     }
 
     private static func genSkipCounting(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        // Level scaling: bigger / less obvious step sizes as the level rises.
-        let lvl = max(1, level)
-        let steps: [Int] = lvl <= 1 ? [2, 5] : lvl == 2 ? [2, 5, 10] : [3, 4, 5, 10]
+        // Difficulty scales with BOTH grade band and level: older grades skip by
+        // bigger / less obvious steps and start from higher numbers.
+        let gradeBoost: Int
+        switch band {
+        case .grade3: gradeBoost = 2
+        case .grade2: gradeBoost = 1
+        default: gradeBoost = 0
+        }
+        let tier = max(1, level) + gradeBoost
+        let steps: [Int]
+        switch tier {
+        case ...1: steps = [2, 5]
+        case 2: steps = [2, 5, 10]
+        case 3: steps = [3, 4, 5, 10]
+        case 4: steps = [3, 4, 6, 8, 10]
+        default: steps = [4, 6, 7, 8, 9, 10, 25, 50]
+        }
         let step = steps.randomElement(using: &rng) ?? 2
-        let start = step * (1 + Int(rng.next() % UInt64(2 + lvl)))
+        let start = step * (1 + Int(rng.next() % UInt64(2 + tier)))
         let seq = (0..<4).map { start + step * $0 }
         let next = start + step * 4
         let seqText = seq.map(String.init).joined(separator: ", ") + ", __"
@@ -694,12 +708,25 @@ enum CurriculumGenerator {
     private static let cvcWords: [(String, String)] = [
         ("cat", "🐱"), ("dog", "🐶"), ("hat", "🎩"), ("bat", "🦇"), ("pig", "🐷"),
         ("sun", "☀️"), ("bus", "🚌"), ("cup", "☕"), ("fox", "🦊"), ("hen", "🐔"),
-        ("bed", "🛏️"), ("car", "🚗"), ("map", "🗺️"), ("pen", "🖊️")
+        ("bed", "🛏️"), ("car", "🚗"), ("map", "🗺️"), ("pen", "🖊️"),
+        ("bee", "🐝"), ("cow", "🐮"), ("owl", "🦉"), ("egg", "🥚"), ("key", "🔑"),
+        ("box", "📦"), ("ant", "🐜"), ("jet", "🛩️")
     ]
+    /// 4-letter words with an emoji — used to gently stretch younger grades.
+    private static let fourLetterWords: [(String, String)] = [
+        ("frog", "🐸"), ("fish", "🐟"), ("bear", "🐻"), ("duck", "🦆"), ("lion", "🦁"),
+        ("star", "⭐"), ("moon", "🌙"), ("cake", "🍰"), ("boat", "⛵"), ("ball", "⚽"),
+        ("bird", "🐦"), ("crab", "🦀"), ("leaf", "🍃"), ("corn", "🌽"), ("drum", "🥁")
+    ]
+    /// Longer 5-6 letter words with an emoji — harder unscrambles for older grades.
     private static let longerWords: [(String, String)] = [
         ("monkey", "🐒"), ("rabbit", "🐰"), ("turtle", "🐢"), ("banana", "🍌"),
         ("apple", "🍎"), ("school", "🏫"), ("flower", "🌸"), ("garden", "🌳"),
-        ("rocket", "🚀"), ("dragon", "🐉")
+        ("rocket", "🚀"), ("dragon", "🐉"), ("pizza", "🍕"), ("tiger", "🐯"),
+        ("zebra", "🦓"), ("panda", "🐼"), ("snake", "🐍"), ("whale", "🐳"),
+        ("train", "🚆"), ("robot", "🤖"), ("grapes", "🍇"), ("cherry", "🍒"),
+        ("guitar", "🎸"), ("pencil", "✏️"), ("castle", "🏰"), ("cookie", "🍪"),
+        ("camel", "🐫"), ("mouse", "🐭"), ("truck", "🚚"), ("crown", "👑")
     ]
     private static let sightWordsK = ["the", "and", "is", "you", "to", "see", "we", "go"]
     private static let sightWords1 = ["was", "are", "have", "they", "with", "from", "this", "that"]
@@ -873,7 +900,19 @@ enum CurriculumGenerator {
     }
 
     private static func genUnscramble(band: GradeBand, level: Int, rng: inout SeededRNG) -> NormalizedQuestion {
-        let pool = band == .kindergarten || band == .grade1 ? cvcWords : (cvcWords + longerWords)
+        // Word length scales with grade so older kids unscramble longer, harder
+        // words (more letters out of place) while younger kids stay on CVC words.
+        let pool: [(String, String)]
+        switch band {
+        case .grade3:
+            pool = longerWords.filter { $0.0.count >= 5 }
+        case .grade2:
+            pool = fourLetterWords + longerWords.filter { $0.0.count <= 5 }
+        case .grade1:
+            pool = cvcWords + fourLetterWords
+        default: // preschool, kindergarten
+            pool = cvcWords
+        }
         let pick = pool.randomElement(using: &rng) ?? ("dog", "🐶")
         let word = pick.0
         var letters = Array(word).map { String($0) }
