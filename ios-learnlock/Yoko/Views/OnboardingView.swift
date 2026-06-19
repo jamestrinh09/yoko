@@ -35,10 +35,13 @@ struct OnboardingView: View {
         Group {
             if step == 23 {
                 commitmentScreen
+                    .iPadScaled { DS.Color.background }
             } else if isDemoQuestionStep {
                 demoQuestionScreen
+                    .iPadScaled { Color.white }
             } else {
                 standardScreen
+                    .iPadScaled { stepBackground }
             }
         }
         .animation(.spring(duration: 0.4), value: step)

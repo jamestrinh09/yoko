@@ -76,6 +76,7 @@ struct LessonPlayerView: View {
                 }
             }
         }
+        .iPadScaled { Color.white }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .navigationBarBackButtonHidden(true)
         .onChange(of: contentHeight) { _, _ in evaluateScrollHint() }

@@ -81,6 +81,58 @@ extension View {
     }
 }
 
+// MARK: - iPad layout scaling
+
+/// Scales and centers a screen's content on iPad so text, GIFs, cards and other
+/// content read larger and sit in a comfortable centered column — while leaving
+/// iPhone layouts completely untouched (the modifier is a no-op on iPhone).
+///
+/// The existing iPhone layout is rendered at `baseWidth` (a typical large-phone
+/// width) and then uniformly scaled up, so every proportion matches the phone
+/// exactly. `background` fills the side margins; pass a view matching the
+/// screen's own backdrop so the margins blend seamlessly (vertical gradients and
+/// solid colors extend perfectly).
+struct IPadScaledLayout<Background: View>: ViewModifier {
+    var baseWidth: CGFloat
+    var maxScale: CGFloat
+    @ViewBuilder var background: () -> Background
+
+    func body(content: Content) -> some View {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            ZStack {
+                background().ignoresSafeArea()
+                GeometryReader { proxy in
+                    let scale = min(maxScale, max(1, proxy.size.width / baseWidth))
+                    content
+                        .frame(width: baseWidth, height: proxy.size.height / scale)
+                        .scaleEffect(scale)
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// iPad scaling with an explicit margin background — pass the screen's own
+    /// backdrop so the centered column blends into the side margins.
+    func iPadScaled<Background: View>(
+        baseWidth: CGFloat = 430,
+        maxScale: CGFloat = 1.6,
+        @ViewBuilder background: @escaping () -> Background
+    ) -> some View {
+        modifier(IPadScaledLayout(baseWidth: baseWidth, maxScale: maxScale, background: background))
+    }
+
+    /// iPad scaling that relies on a full-bleed background already sitting behind
+    /// the content (margins show whatever is already there).
+    func iPadScaled(baseWidth: CGFloat = 430, maxScale: CGFloat = 1.6) -> some View {
+        modifier(IPadScaledLayout(baseWidth: baseWidth, maxScale: maxScale) { Color.clear })
+    }
+}
+
 // MARK: - Buttons
 
 struct DSPrimaryButtonStyle: ButtonStyle {

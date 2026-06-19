@@ -91,6 +91,7 @@ struct AppLockedView: View {
                 .offset(y: appear ? 0 : 20)
         }
         }
+        .iPadScaled { DS.Color.background }
         .onAppear {
             withAnimation(.spring(duration: 0.55, bounce: 0.3)) { appear = true }
         }

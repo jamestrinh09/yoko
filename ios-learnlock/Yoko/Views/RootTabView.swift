@@ -46,10 +46,12 @@ struct RootTabView: View {
                 case .settings: SettingsView()
                 }
             }
+            .iPadScaled()
             .transition(.opacity)
 
             if !hideDock {
                 FloatingTabBar(selection: $selection)
+                    .frame(maxWidth: 520)
                     .padding(.horizontal, 40)
                     .padding(.bottom, 12)
                     .transition(.move(edge: .bottom).combined(with: .opacity))

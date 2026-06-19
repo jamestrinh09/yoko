@@ -37,6 +37,7 @@ struct PaywallFlowView: View {
                 topBar
                 stepContent
             }
+            .iPadScaled(maxScale: 1.5)
         }
         .preferredColorScheme(.light)
         .tint(DS.Color.accent)
