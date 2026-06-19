@@ -43,6 +43,14 @@ final class AppStore {
         didSet { UserDefaults.standard.set(onboardingComplete, forKey: "yoko.onboardingComplete") }
     }
 
+    /// Marks this physical device as the child's device. The read-only App Usage
+    /// analytics card (DeviceActivityReport can only read local-device data) is
+    /// shown only on the child's device, so a parent's phone never displays its
+    /// own usage. Defaults to true so a single-device setup behaves as before.
+    var isChildDevice: Bool = UserDefaults.standard.object(forKey: "yoko.isChildDevice") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(isChildDevice, forKey: "yoko.isChildDevice") }
+    }
+
     /// True when the parent passcode gate is actually active (enabled AND a
     /// passcode has been set). When false, every lock action runs without a prompt.
     var passcodeGateActive: Bool {

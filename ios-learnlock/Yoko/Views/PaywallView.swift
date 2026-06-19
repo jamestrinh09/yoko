@@ -21,13 +21,22 @@ struct PaywallFlowView: View {
     /// Shared subscription state (created in YokoApp, passed in explicitly so the
     /// flow doesn't depend on environment inheritance through the cover).
     var store: StoreViewModel
+    /// Parent-account client, used by the "Already have an account?" sign-in path.
+    var account: ParentAccountService
+    /// The shared app store, so a signed-in parent's data can be applied locally.
+    var appStore: AppStore
     /// Fires once the user successfully subscribes or restores — the caller
     /// dismisses the paywall and continues onboarding.
     let onComplete: () -> Void
+    /// Fires when an existing parent signs in via the "Already have an account?"
+    /// chip. Their synced data is already pulled & applied; the caller just
+    /// finishes onboarding without charging again.
+    let onLogin: () -> Void
 
     @State private var currentStep: Int = 0
     @State private var slideForward: Bool = true
     @State private var selectedPlan: PaywallPlan = .annual
+    @State private var showLogin: Bool = false
 
     var body: some View {
         ZStack {
@@ -56,6 +65,10 @@ struct PaywallFlowView: View {
             }
         } message: {
             Text(store.errorMessage ?? "Please try again.")
+        }
+        .sheet(isPresented: $showLogin) {
+            PaywallLoginSheet(account: account, onSuccess: handleLoginSuccess)
+                .presentationDetents([.medium, .large])
         }
     }
 
@@ -93,6 +106,24 @@ struct PaywallFlowView: View {
                 Color.clear.frame(width: 44, height: 44)
             }
             Spacer()
+            // Subtle chip on Step 1 so a parent who already subscribed on another
+            // device can sign in instead of paying again.
+            if currentStep == 0 {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    showLogin = true
+                } label: {
+                    Text("Already have an account?")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(DS.Color.textSecondary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(.white.opacity(0.7), in: Capsule())
+                        .overlay(Capsule().stroke(DS.Color.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .transition(.opacity)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.top, 8)
@@ -172,6 +203,133 @@ struct PaywallFlowView: View {
             let success = await store.restore()
             if success { onComplete() }
         }
+    }
+
+    /// Called after a successful sign-in: pull the household's shared data, apply
+    /// it locally, mark this as a secondary device (analytics live on the child's
+    /// device), and finish onboarding without charging again.
+    private func handleLoginSuccess() {
+        Task {
+            if let remote = await account.pull() { appStore.applySnapshot(remote) }
+            appStore.isChildDevice = false
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            onLogin()
+        }
+    }
+}
+
+// MARK: - Sign-in sheet (existing accounts)
+
+private struct PaywallLoginSheet: View {
+    var account: ParentAccountService
+    let onSuccess: () -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var working: Bool = false
+    @State private var errorText: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 18) {
+                    VStack(spacing: 10) {
+                        ZStack {
+                            Circle().fill(DS.Color.accentSoft).frame(width: 72, height: 72)
+                            Image(systemName: "person.crop.circle.badge.checkmark")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundStyle(DS.Color.accent)
+                        }
+                        Text("Welcome back")
+                            .font(.system(size: 24, weight: .heavy, design: .rounded))
+                            .foregroundStyle(DS.Color.textPrimary)
+                        Text("Sign in to restore your subscription and sync your child's progress to this device.")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundStyle(DS.Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.top, 8)
+
+                    fieldLabel("Email")
+                    TextField("you@example.com", text: $email)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                        .autocorrectionDisabled()
+                        .modifier(PaywallFieldStyle())
+
+                    fieldLabel("Password")
+                    SecureField("Your password", text: $password)
+                        .modifier(PaywallFieldStyle())
+
+                    if let errorText {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                            Text(errorText)
+                        }
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(DS.Color.danger)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    PaywallCTAButton(
+                        title: working ? "Signing in…" : "Sign In",
+                        isLoading: working,
+                        onTap: submit
+                    )
+                    .disabled(working || !canSubmit)
+                    .opacity(canSubmit ? 1 : 0.6)
+                }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 30)
+            }
+            .background(DS.Color.background.ignoresSafeArea())
+            .navigationTitle("Sign In")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+        .tint(DS.Color.accent)
+    }
+
+    private var canSubmit: Bool { email.contains("@") && password.count >= 6 }
+
+    private func submit() {
+        Task {
+            working = true
+            errorText = nil
+            let ok = await account.signIn(email: email, password: password)
+            working = false
+            if ok {
+                onSuccess()
+                dismiss()
+            } else {
+                errorText = account.errorMessage ?? "Couldn't sign in. Please try again."
+            }
+        }
+    }
+
+    private func fieldLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .foregroundStyle(DS.Color.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct PaywallFieldStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 16, weight: .semibold, design: .rounded))
+            .foregroundStyle(DS.Color.textPrimary)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(DS.Color.surface)
+            .clipShape(.rect(cornerRadius: DS.Radius.medium))
+            .overlay(RoundedRectangle(cornerRadius: DS.Radius.medium).stroke(DS.Color.border, lineWidth: 1))
     }
 }
 

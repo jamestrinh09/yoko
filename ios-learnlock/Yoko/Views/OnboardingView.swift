@@ -11,6 +11,7 @@ struct OnboardingView: View {
     @Environment(AppStore.self) private var store
     @Environment(ScreenTimeService.self) private var screenTime
     @Environment(StoreViewModel.self) private var storeVM
+    @Environment(ParentAccountService.self) private var account
     @State private var step: Int = 1
     @State private var showPaywall: Bool = false
     @State private var childName: String = ""
@@ -55,11 +56,21 @@ struct OnboardingView: View {
             PaywallFlowView(
                 childName: childName,
                 store: storeVM,
+                account: account,
+                appStore: store,
                 onComplete: {
                     // The paywall is now the final gate (shown after the commitment
                     // step). Completing it finishes onboarding and swaps to the app.
                     showPaywall = false
                     completeOnboarding()
+                },
+                onLogin: {
+                    // An existing parent signed in: their synced data was already
+                    // pulled & applied by the paywall. Skip the normal onboarding
+                    // writes (which would overwrite the synced profile) and go
+                    // straight into the app with shared data.
+                    showPaywall = false
+                    store.onboardingComplete = true
                 }
             )
         }

@@ -160,7 +160,9 @@ struct SettingsView: View {
         .buttonStyle(.plain)
     }
 
+    @ViewBuilder
     private var parentAccountSection: some View {
+        @Bindable var store = store
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: "Account & Device Sync")
             Button { showParentAccount = true } label: {
@@ -194,6 +196,34 @@ struct SettingsView: View {
                 .overlay(RoundedRectangle(cornerRadius: DS.Radius.large).stroke(DS.Color.border, lineWidth: 1))
             }
             .buttonStyle(.plain)
+
+            // Device identifier — controls which device displays the child's
+            // app-usage analytics (usage can only be read on the device it
+            // happens on). On the child's iPad this stays on; on a parent's
+            // phone they turn it off.
+            HStack(spacing: 14) {
+                Image(systemName: "ipad")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(DS.Color.accent)
+                    .frame(width: 36, height: 36)
+                    .background(DS.Color.accentSoft)
+                    .clipShape(.rect(cornerRadius: 10))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("This is the child's device")
+                        .font(.dsHeadline)
+                        .foregroundStyle(DS.Color.textPrimary)
+                    Text("Show app-usage analytics on this device")
+                        .font(.dsCaption)
+                        .foregroundStyle(DS.Color.textSecondary)
+                }
+                Spacer()
+                Toggle("", isOn: $store.isChildDevice).labelsHidden().tint(DS.Color.accent)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(DS.Color.surface)
+            .clipShape(.rect(cornerRadius: DS.Radius.large))
+            .overlay(RoundedRectangle(cornerRadius: DS.Radius.large).stroke(DS.Color.border, lineWidth: 1))
         }
     }
 

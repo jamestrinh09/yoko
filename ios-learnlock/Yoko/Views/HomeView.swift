@@ -15,7 +15,11 @@ struct HomeView: View {
                 greeting
                 weeklyStreakCard
                 quickStatsRow
-                AppUsageCard()
+                if store.isChildDevice {
+                    AppUsageCard()
+                } else {
+                    parentDeviceUsageNote
+                }
                 activeLocksSection
                 rewardsPreview
                 Spacer(minLength: 100)
@@ -161,6 +165,44 @@ struct HomeView: View {
                 isToday: i == todayIndex
             )
         }
+    }
+
+    // MARK: - App usage (parent device note)
+
+    /// Shown on a non-child device in place of the live App Usage card. Usage can
+    /// only be read on the device it happens on, so analytics live on the child's
+    /// device — the parent flips the toggle in Settings to show it there.
+    private var parentDeviceUsageNote: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(DS.Color.accent)
+                Text("App Usage")
+                    .font(.dsTitle2)
+                    .foregroundStyle(DS.Color.textPrimary)
+                Spacer()
+            }
+            HStack(spacing: 12) {
+                Image(systemName: "ipad.and.iphone")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(DS.Color.accent.opacity(0.7))
+                Text("App usage is tracked on your child's device. Turn on \u{201C}This is the child's device\u{201D} in Settings to show it here.")
+                    .font(.dsCaption)
+                    .foregroundStyle(DS.Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, 6)
+        }
+        .padding(18)
+        .background(DS.Color.surface)
+        .clipShape(.rect(cornerRadius: DS.Radius.large))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.large)
+                .stroke(DS.Color.border, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 6)
     }
 
     // MARK: - Stats
