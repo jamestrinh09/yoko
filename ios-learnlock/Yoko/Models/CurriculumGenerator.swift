@@ -145,6 +145,25 @@ enum CurriculumGenerator {
     /// Full question fingerprint: prompt + answer + the content payload (the
     /// pairs/items/values that actually distinguish two questions sharing one
     /// fixed prompt, e.g. memory match or "What time does the clock show?").
+    /// Skills whose questions are built around a single word (or word family).
+    /// For these we de-dup by the core word so the same word never appears in two
+    /// questions — e.g. "monkey" can't show up in two unscrambles or vocab cards.
+    private static let wordDedupSkills: Set<String> = [
+        "unscramble", "vocabulary", "spelling", "sight words", "rhyming", "word families"
+    ]
+
+    /// A coarse de-dup key for word-based english questions. `nil` for everything
+    /// else (those fall back to the full content signature).
+    private static func wordToken(_ q: NormalizedQuestion) -> String? {
+        guard wordDedupSkills.contains(q.skill) else { return nil }
+        let word = q.questionContent["word"]
+            ?? q.questionContent["target"]
+            ?? q.questionContent["meaning"]
+            ?? q.questionContent["family"]
+            ?? q.correctAnswer
+        return "wt|\(q.skill)|\(word.lowercased())"
+    }
+
     private static func signature(_ q: NormalizedQuestion) -> String {
         let contentSig = q.questionContent
             .sorted { $0.key < $1.key }
@@ -173,8 +192,11 @@ enum CurriculumGenerator {
             let candidate = generate(skill: focusSkill, band: band, level: level + boost, rng: &rng)
             let sig = signature(candidate)
             guard !seen.contains(sig), !usedSignatures.contains(sig) else { continue }
+            let token = wordToken(candidate)
+            if let token, seen.contains(token) || usedSignatures.contains(token) { continue }
             seen.insert(sig)
             usedSignatures.insert(sig)
+            if let token { seen.insert(token); usedSignatures.insert(token) }
             qs.append(candidate)
         }
         // Pass 2 — pool exhausted across lessons: relax the cross-lesson rule but
@@ -184,8 +206,11 @@ enum CurriculumGenerator {
             safety += 1
             let candidate = generate(skill: focusSkill, band: band, level: level + boost, rng: &rng)
             let sig = signature(candidate)
+            let token = wordToken(candidate)
+            if let token, seen.contains(token) { continue }
             guard seen.insert(sig).inserted else { continue }
             usedSignatures.insert(sig)
+            if let token { seen.insert(token); usedSignatures.insert(token) }
             qs.append(candidate)
         }
         // Last resort — guarantee exactly 3 questions.
@@ -710,13 +735,19 @@ enum CurriculumGenerator {
         ("sun", "☀️"), ("bus", "🚌"), ("cup", "☕"), ("fox", "🦊"), ("hen", "🐔"),
         ("bed", "🛏️"), ("car", "🚗"), ("map", "🗺️"), ("pen", "🖊️"),
         ("bee", "🐝"), ("cow", "🐮"), ("owl", "🦉"), ("egg", "🥚"), ("key", "🔑"),
-        ("box", "📦"), ("ant", "🐜"), ("jet", "🛩️")
+        ("box", "📦"), ("ant", "🐜"), ("jet", "🛩️"),
+        ("bag", "👜"), ("web", "🕸️"), ("rug", "🧶"), ("mug", "🍺"), ("van", "🚐"),
+        ("log", "🪵"), ("pie", "🥧"), ("axe", "🪓"), ("fan", "🪭"), ("saw", "🪚"),
+        ("nut", "🥜"), ("ram", "🐏"), ("bug", "🐛"), ("ear", "👂"), ("eye", "👁️")
     ]
     /// 4-letter words with an emoji — used to gently stretch younger grades.
     private static let fourLetterWords: [(String, String)] = [
         ("frog", "🐸"), ("fish", "🐟"), ("bear", "🐻"), ("duck", "🦆"), ("lion", "🦁"),
         ("star", "⭐"), ("moon", "🌙"), ("cake", "🍰"), ("boat", "⛵"), ("ball", "⚽"),
-        ("bird", "🐦"), ("crab", "🦀"), ("leaf", "🍃"), ("corn", "🌽"), ("drum", "🥁")
+        ("bird", "🐦"), ("crab", "🦀"), ("leaf", "🍃"), ("corn", "🌽"), ("drum", "🥁"),
+        ("goat", "🐐"), ("wolf", "🐺"), ("frog", "🐸"), ("bone", "🦴"), ("kite", "🪁"),
+        ("lamp", "💡"), ("ring", "💍"), ("shoe", "👟"), ("sock", "🧦"), ("door", "🚪"),
+        ("bell", "🔔"), ("book", "📖"), ("gift", "🎁"), ("hand", "✋"), ("foot", "🦶")
     ]
     /// Longer 5-6 letter words with an emoji — harder unscrambles for older grades.
     private static let longerWords: [(String, String)] = [
@@ -726,7 +757,12 @@ enum CurriculumGenerator {
         ("zebra", "🦓"), ("panda", "🐼"), ("snake", "🐍"), ("whale", "🐳"),
         ("train", "🚆"), ("robot", "🤖"), ("grapes", "🍇"), ("cherry", "🍒"),
         ("guitar", "🎸"), ("pencil", "✏️"), ("castle", "🏰"), ("cookie", "🍪"),
-        ("camel", "🐫"), ("mouse", "🐭"), ("truck", "🚚"), ("crown", "👑")
+        ("camel", "🐫"), ("mouse", "🐭"), ("truck", "🚚"), ("crown", "👑"),
+        ("koala", "🐨"), ("horse", "🐴"), ("sheep", "🐑"), ("chick", "🐤"),
+        ("lemon", "🍋"), ("melon", "🍈"), ("peach", "🍑"), ("onion", "🧅"),
+        ("plane", "✈️"), ("anchor", "⚓"), ("bridge", "🌉"), ("violin", "🎻"),
+        ("rainbow", "🌈"), ("pumpkin", "🎃"), ("island", "🏝️"), ("planet", "🪐"),
+        ("parrot", "🦜"), ("donkey", "🫏"), ("flute", "🪈"), ("cactus", "🌵")
     ]
     private static let sightWordsK = ["the", "and", "is", "you", "to", "see", "we", "go"]
     private static let sightWords1 = ["was", "are", "have", "they", "with", "from", "this", "that"]
@@ -777,13 +813,20 @@ enum CurriculumGenerator {
     /// require real word knowledge instead of being solvable by elimination.
     private static let vocabCategories: [[(String, String)]] = [
         [("cat", "🐱"), ("dog", "🐶"), ("pig", "🐷"), ("fox", "🦊"), ("hen", "🐔"),
-         ("monkey", "🐒"), ("rabbit", "🐰"), ("turtle", "🐢"), ("dragon", "🐉")],
+         ("monkey", "🐒"), ("rabbit", "🐰"), ("turtle", "🐢"), ("dragon", "🐉"),
+         ("tiger", "🐯"), ("horse", "🐴"), ("sheep", "🐑"), ("koala", "🐨"),
+         ("panda", "🐼"), ("zebra", "🦓"), ("mouse", "🐭"), ("snake", "🐍")],
         [("apple", "🍎"), ("banana", "🍌"), ("cookie", "🍪"), ("pizza", "🍕"),
-         ("carrot", "🥕"), ("corn", "🌽"), ("bread", "🍞")],
+         ("carrot", "🥕"), ("corn", "🌽"), ("bread", "🍞"),
+         ("lemon", "🍋"), ("peach", "🍑"), ("grapes", "🍇"), ("cherry", "🍒"),
+         ("melon", "🍈"), ("onion", "🧅")],
         [("car", "🚗"), ("bus", "🚌"), ("rocket", "🚀"), ("bed", "🛏️"),
-         ("pen", "🖊️"), ("book", "📚"), ("clock", "⏰")],
+         ("pen", "🖊️"), ("book", "📚"), ("clock", "⏰"),
+         ("train", "🚆"), ("truck", "🚚"), ("plane", "✈️"), ("boat", "⛵"),
+         ("lamp", "💡"), ("key", "🔑")],
         [("flower", "🌸"), ("tree", "🌳"), ("sun", "☀️"), ("star", "⭐"),
-         ("cloud", "☁️"), ("moon", "🌙")]
+         ("cloud", "☁️"), ("moon", "🌙"),
+         ("rainbow", "🌈"), ("leaf", "🍃"), ("cactus", "🌵"), ("island", "🏝️")]
     ]
 
     /// Picture clues whose word clearly starts with the paired letter. Used so a

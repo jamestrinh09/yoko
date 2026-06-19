@@ -53,6 +53,27 @@ final class AppStore {
     /// Set during onboarding and applied to the app afterwards.
     var unlockRule: String = "session"
 
+    /// Optional subject the parent wants the child to focus on. When set, the
+    /// unlock lesson is always drawn from this subject only. `nil` = all subjects.
+    /// Persisted so the choice survives relaunches.
+    var focusSubject: Subject? = {
+        guard let raw = UserDefaults.standard.string(forKey: "yoko.focusSubject") else { return nil }
+        return Subject(rawValue: raw)
+    }() {
+        didSet { UserDefaults.standard.set(focusSubject?.rawValue, forKey: "yoko.focusSubject") }
+    }
+
+    /// The next lesson the child should play, honoring `focusSubject` when set:
+    /// the first incomplete lesson within the focused subject (or any subject),
+    /// falling back to the most recent lesson once the queue is exhausted.
+    var focusedNextLesson: Lesson? {
+        let pools = focusSubject.map { fs in subjects.filter { $0.subject == fs } } ?? subjects
+        if let incomplete = pools.flatMap(\.lessons).first(where: { !$0.completed }) {
+            return incomplete
+        }
+        return pools.flatMap(\.lessons).last
+    }
+
     /// A grade promotion awaiting parent approval (drives the promotion banner).
     var pendingPromotion: GradePromotion?
 

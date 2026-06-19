@@ -119,10 +119,8 @@ struct LearnView: View {
     }
 
     private var nextLesson: Lesson? {
-        if let incomplete = store.subjects.flatMap(\.lessons).first(where: { !$0.completed }) {
-            return incomplete
-        }
-        return store.subjects.flatMap(\.lessons).last
+        // Honors the parent's focus subject (Settings → Subjects) when set.
+        store.focusedNextLesson
     }
 
     private var subjectsList: some View {

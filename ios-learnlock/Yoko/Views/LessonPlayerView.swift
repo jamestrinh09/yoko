@@ -270,15 +270,18 @@ struct LessonPlayerView: View {
                     UnscrambleBackButton(state: unscramble)
                 }
                 Spacer(minLength: 0)
-                if unscramble.active {
+                // Hint buttons only surface once armed (after 5s on the question).
+                if unscramble.active && unscramble.hintAvailable {
                     UnscrambleHintButton(state: unscramble)
-                } else if hint.active {
+                } else if hint.active && hint.available {
                     QuestionHintButton(state: hint)
                 }
             }
         }
         .animation(.spring(duration: 0.3), value: unscramble.active)
+        .animation(.spring(duration: 0.3), value: unscramble.hintAvailable)
         .animation(.spring(duration: 0.3), value: hint.active)
+        .animation(.spring(duration: 0.3), value: hint.available)
     }
 
     @ViewBuilder

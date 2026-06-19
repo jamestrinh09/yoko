@@ -145,10 +145,36 @@ struct QuestionRenderer: View {
     }
 
     private func configureHint() {
+        let key = questionKey
+        hint.questionKey = key
         hint.revealed = false
         hint.available = false
         hint.glow = false
         hint.isLocked = isLocked
+
+        // Unscramble owns its own hint (revealing the correct letter order). Drive
+        // its hint state from here — not from the card's onAppear — so the hint
+        // button reliably re-arms after the 5s delay even when the same card view
+        // is reused between two consecutive unscramble questions.
+        if isUnscramble {
+            hint.active = false
+            hint.fadedChoice = nil
+            unscramble.active = true
+            unscramble.hintRevealed = false
+            unscramble.hintAvailable = false
+            unscramble.hintGlow = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                guard unscramble.active, !unscramble.hintRevealed else { return }
+                unscramble.hintAvailable = true
+                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                    unscramble.hintGlow = true
+                }
+            }
+            return
+        }
+
+        unscramble.active = false
+
         guard supportsGenericHint else {
             hint.active = false
             hint.fadedChoice = nil
@@ -156,7 +182,8 @@ struct QuestionRenderer: View {
         }
         hint.active = true
         hint.fadedChoice = hintWrongChoice
-        let key = questionKey
+        // The hint button only appears once this fires (after 5 seconds on the
+        // question), giving the child a chance to solve it unaided first.
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
             guard hint.active, hint.questionKey == key, !hint.revealed else { return }
             hint.available = true
@@ -164,7 +191,6 @@ struct QuestionRenderer: View {
                 hint.glow = true
             }
         }
-        hint.questionKey = key
     }
 
     // MARK: - Interactive Content
@@ -259,7 +285,12 @@ struct QuestionRenderer: View {
             // vocab (word choices) keeps the standard word style.
             visualTapGrid(items: choices, style: isEmojiChoices ? .emoji : .word)
 
-        case "choose_correct_spelling", "sight_word_recognition":
+        case "choose_correct_spelling":
+            // Stack the spelling options vertically so each full word gets its own
+            // row and never wraps onto a second line.
+            visualTapGrid(items: choices, style: .word, stacked: true)
+
+        case "sight_word_recognition":
             visualTapGrid(items: choices, style: englishChoiceStyle)
 
         case "rhyming_words", "word_families":
@@ -510,8 +541,8 @@ struct QuestionRenderer: View {
         return .init(value: Int(raw) ?? 0, emoji: nil)
     }
 
-    private func visualTapGrid(items: [String], style: ChoiceStyle) -> some View {
-        FlowRow(items: items, selected: selectedAnswer, locked: isLocked, fadedChoice: hintFadedChoice) { item in
+    private func visualTapGrid(items: [String], style: ChoiceStyle, stacked: Bool = false) -> some View {
+        FlowRow(items: items, selected: selectedAnswer, locked: isLocked, fadedChoice: hintFadedChoice, stacked: stacked) { item in
             guard !isLocked else { return }
             selectedAnswer = item
         }
@@ -713,15 +744,19 @@ struct FlowRow: View {
     let selected: String?
     let locked: Bool
     var fadedChoice: String? = nil
+    var stacked: Bool = false
     let action: (String) -> Void
     @Environment(\.choiceStyle) private var style
 
     var body: some View {
-        // With exactly two choices, use a fixed 2-column grid so they sit
-        // side-by-side in a single clean row rather than an uneven adaptive layout.
-        let columns: [GridItem] = items.count == 2
-            ? [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-            : [GridItem(.adaptive(minimum: minWidth), spacing: 12)]
+        // `stacked` forces one full-width choice per row (used by spelling, where
+        // long words need their own line). With exactly two choices, use a fixed
+        // 2-column grid so they sit side-by-side in a single clean row.
+        let columns: [GridItem] = stacked
+            ? [GridItem(.flexible(), spacing: 12)]
+            : (items.count == 2
+                ? [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+                : [GridItem(.adaptive(minimum: minWidth), spacing: 12)])
         return LazyVGrid(columns: columns, spacing: 12) {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 Button {
@@ -1370,21 +1405,14 @@ struct UnscrambleCard: View {
                 .frame(maxWidth: .infinity)
         }
         .onAppear {
+            // Activeness + the 5s hint arming are owned by the renderer's
+            // `configureHint()` so the button survives card reuse between
+            // consecutive unscramble questions. Here we only seed the tray.
             state.active = true
             state.letters = letters
             state.correctCount = correctLetters.count
             state.picked = []
-            state.hintRevealed = false
-            state.hintAvailable = false
-            state.hintGlow = false
             state.isLocked = isLocked
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-                guard state.active, !state.hintRevealed else { return }
-                state.hintAvailable = true
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                    state.hintGlow = true
-                }
-            }
         }
         .onDisappear { state.active = false }
         .onChange(of: isLocked) { _, newValue in state.isLocked = newValue }

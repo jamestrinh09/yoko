@@ -671,11 +671,13 @@ struct DailyGoalSheet: View {
 struct SubjectsOverviewSheet: View {
     let subjects: [SubjectProgress]
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppStore.self) private var store
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 14) {
+                    focusSubjectCard
                     ForEach(subjects) { sp in
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 12) {
@@ -733,6 +735,45 @@ struct SubjectsOverviewSheet: View {
                 }
             }
         }
+    }
+
+    /// Lets the parent pin the child to one subject. When set, every unlock
+    /// lesson is drawn only from that subject; "Both" restores the full mix.
+    private var focusSubjectCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Focus subject")
+                    .font(.dsHeadline)
+                    .foregroundStyle(DS.Color.textPrimary)
+                Text("Unlock lessons will only come from the subject you pick.")
+                    .font(.dsCaption)
+                    .foregroundStyle(DS.Color.textSecondary)
+            }
+            HStack(spacing: 10) {
+                focusChip(title: "Both", subject: nil)
+                ForEach(Subject.allCases) { subject in
+                    focusChip(title: subject.title, subject: subject)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dsCard()
+    }
+
+    private func focusChip(title: String, subject: Subject?) -> some View {
+        let isSelected = store.focusSubject == subject
+        return Button {
+            withAnimation(.spring(duration: 0.25)) { store.focusSubject = subject }
+            UISelectionFeedbackGenerator().selectionChanged()
+        } label: {
+            Text(title)
+                .font(.system(size: 15, weight: .heavy, design: .rounded))
+                .foregroundStyle(isSelected ? .white : DS.Color.textSecondary)
+                .frame(maxWidth: .infinity, minHeight: 42)
+                .background(isSelected ? DS.Color.accent : DS.Color.border.opacity(0.4))
+                .clipShape(.capsule)
+        }
+        .buttonStyle(.plain)
     }
 }
 
