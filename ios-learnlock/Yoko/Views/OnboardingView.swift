@@ -14,6 +14,14 @@ struct OnboardingView: View {
     @Environment(ParentAccountService.self) private var account
     @State private var step: Int = 1
     @State private var showPaywall: Bool = false
+    /// Sign-in / device-role flow state for an existing parent linking a 2nd device.
+    @State private var showLoginSheet: Bool = false
+    @State private var showRoleQuestion: Bool = false
+    @State private var roleQuestionContext: RoleContext = .onboardingStart
+    /// True once a parent signed in: we route through the trimmed permission-only
+    /// flow (steps 21/22) instead of the normal data-entry steps.
+    @State private var loginFlow: Bool = false
+    @State private var loginRoleChild: Bool = true
     @State private var childName: String = ""
     @State private var grade: String = ""
     @State private var screenStruggle: String = ""
@@ -31,6 +39,10 @@ struct OnboardingView: View {
     @State private var appGlow = false
 
     private let totalSteps = 23
+
+    /// Where the device-role question was triggered from, controlling what happens
+    /// after the parent picks who's using the device.
+    private enum RoleContext { case onboardingStart, paywallFallback }
 
     var body: some View {
         Group {
@@ -65,14 +77,29 @@ struct OnboardingView: View {
                     completeOnboarding()
                 },
                 onLogin: {
-                    // An existing parent signed in: their synced data was already
-                    // pulled & applied by the paywall. Skip the normal onboarding
-                    // writes (which would overwrite the synced profile) and go
-                    // straight into the app with shared data.
+                    // An existing parent signed in via the paywall fallback chip:
+                    // their synced data was already pulled & applied. Ask the same
+                    // device-role question, then drop them into the app.
                     showPaywall = false
-                    store.onboardingComplete = true
+                    roleQuestionContext = .paywallFallback
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(400))
+                        showRoleQuestion = true
+                    }
                 }
             )
+        }
+        // Existing-account sign-in, reusing the paywall's sign-in sheet.
+        .sheet(isPresented: $showLoginSheet) {
+            PaywallLoginSheet(account: account, onSuccess: handleOnboardingLoginSuccess)
+                .presentationDetents([.medium, .large])
+        }
+        // One-step "Who's using this device?" question shown after a successful
+        // sign-in. It sets the existing child-device toggle and branches the rest.
+        .sheet(isPresented: $showRoleQuestion) {
+            DeviceRoleSheet(onSelect: selectDeviceRole)
+                .presentationDetents([.medium])
+                .interactiveDismissDisabled()
         }
     }
 
@@ -129,7 +156,7 @@ struct OnboardingView: View {
 
     private func topBar(tintWhite: Bool) -> some View {
         HStack(spacing: 0) {
-            if step > 1 {
+            if step > 1 && !loginFlow {
                 Button {
                     withAnimation(.spring(duration: 0.3)) {
                         step = max(1, step - 1)
@@ -221,7 +248,21 @@ struct OnboardingView: View {
     private var footerView: some View {
         switch step {
         case 1:
-            PrimaryButton(label: "Get started", action: nextStep)
+            VStack(spacing: 14) {
+                PrimaryButton(label: "Get started", action: nextStep)
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    roleQuestionContext = .onboardingStart
+                    showLoginSheet = true
+                } label: {
+                    (Text("Already have an account? ")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                     + Text("Sign in")
+                        .font(.system(size: 14, weight: .bold, design: .rounded)))
+                        .foregroundStyle(DS.Color.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
         case 2:
             PrimaryButton(label: "That sounds familiar", action: nextStep)
         case 3:
@@ -266,7 +307,18 @@ struct OnboardingView: View {
                 }
             }
         case 22:
-            PrimaryButton(label: "Turn on notifications", action: requestNotificationsThenFinish)
+            if loginFlow {
+                VStack(spacing: 12) {
+                    PrimaryButton(label: "Turn on notifications", action: requestNotificationsThenCompleteLogin)
+                    if !loginRoleChild {
+                        Button("Maybe later", action: completeOnboardingViaLogin)
+                            .font(.dsCallout)
+                            .foregroundStyle(DS.Color.textSecondary)
+                    }
+                }
+            } else {
+                PrimaryButton(label: "Turn on notifications", action: requestNotificationsThenFinish)
+            }
         default:
             EmptyView()
         }
@@ -307,7 +359,65 @@ struct OnboardingView: View {
         store.setGrade(gradeNumeric(grade))
         store.unlockRule = unlockRule
         store.applyOnboardingRuleToAllLocks(unlockRule)
+        // Fresh purchase by a parent with no account yet → offer one-time sync
+        // setup the first time they land on Home (handled by HomeView).
+        store.pendingSyncSetupOffer = !account.isLinked
         store.onboardingComplete = true
+    }
+
+    // MARK: - Existing-account sign-in flow
+
+    /// Called after a successful sign-in from onboarding Step 1. Pulls and applies
+    /// the household's shared snapshot, then asks who's using this device.
+    private func handleOnboardingLoginSuccess() {
+        Task { @MainActor in
+            if let remote = await account.pull() { store.applySnapshot(remote) }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            // Small delay so the sign-in sheet finishes dismissing before the
+            // role question sheet is presented.
+            try? await Task.sleep(for: .milliseconds(300))
+            showRoleQuestion = true
+        }
+    }
+
+    /// Applies the chosen device role and branches the rest of onboarding.
+    private func selectDeviceRole(isChild: Bool) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        store.isChildDevice = isChild
+        showRoleQuestion = false
+        switch roleQuestionContext {
+        case .paywallFallback:
+            // Permissions were already handled in the normal onboarding before
+            // the paywall — just finish into the app with synced data.
+            completeOnboardingViaLogin()
+        case .onboardingStart:
+            // Synced data covers child name/grade/curriculum, so skip the data
+            // steps and route only through the relevant permission steps.
+            loginFlow = true
+            loginRoleChild = isChild
+            withAnimation(.spring(duration: 0.35)) {
+                // Child device enforces locks → Screen Time first; parent device
+                // skips Screen Time and only sees Notifications.
+                step = isChild ? 21 : 22
+            }
+        }
+    }
+
+    /// Finishes onboarding for a signed-in parent without writing local profile
+    /// data (which would overwrite the synced household snapshot).
+    private func completeOnboardingViaLogin() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        store.onboardingComplete = true
+    }
+
+    private func requestNotificationsThenCompleteLogin() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Task { @MainActor in
+            let granted = (try? await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
+            store.notificationsEnabled = granted
+            completeOnboardingViaLogin()
+        }
     }
 
     private func requestScreenTimeThenNext() {
@@ -1105,6 +1215,89 @@ struct OnboardingView: View {
         case "daily": return "1 lesson = all day"
         default: return "—"
         }
+    }
+}
+
+// MARK: - Device Role Question (after sign-in)
+
+/// A single "Who's using this device?" question shown right after an existing
+/// parent signs in. The choice drives the existing "this is the child's device"
+/// toggle and which permission steps the rest of onboarding shows.
+struct DeviceRoleSheet: View {
+    /// `true` when the child is using this device, `false` for the parent.
+    let onSelect: (Bool) -> Void
+
+    var body: some View {
+        VStack(spacing: 22) {
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle().fill(DS.Color.accentSoft).frame(width: 70, height: 70)
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(DS.Color.accent)
+                }
+                Text("Who's using this device?")
+                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DS.Color.textPrimary)
+                    .multilineTextAlignment(.center)
+                Text("This decides what we set up next. You can change it later in Settings.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(DS.Color.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.top, 26)
+
+            VStack(spacing: 12) {
+                roleButton(
+                    icon: "figure.child",
+                    title: "My child",
+                    subtitle: "Locks and usage tracking live here",
+                    isChild: true
+                )
+                roleButton(
+                    icon: "person.fill",
+                    title: "Me (parent)",
+                    subtitle: "Watch progress and manage locks",
+                    isChild: false
+                )
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 20)
+        .frame(maxWidth: .infinity)
+        .background(DS.Color.background.ignoresSafeArea())
+    }
+
+    private func roleButton(icon: String, title: String, subtitle: String, isChild: Bool) -> some View {
+        Button { onSelect(isChild) } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(DS.Color.accent)
+                    .frame(width: 46, height: 46)
+                    .background(DS.Color.accentSoft)
+                    .clipShape(.rect(cornerRadius: 14))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .heavy, design: .rounded))
+                        .foregroundStyle(DS.Color.textPrimary)
+                    Text(subtitle)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(DS.Color.textSecondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DS.Color.textTertiary)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(DS.Color.surface)
+            .clipShape(.rect(cornerRadius: DS.Radius.large))
+            .overlay(RoundedRectangle(cornerRadius: DS.Radius.large).stroke(DS.Color.border, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 }
 

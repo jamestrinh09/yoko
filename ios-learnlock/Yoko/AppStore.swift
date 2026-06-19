@@ -48,7 +48,49 @@ final class AppStore {
     /// shown only on the child's device, so a parent's phone never displays its
     /// own usage. Defaults to true so a single-device setup behaves as before.
     var isChildDevice: Bool = UserDefaults.standard.object(forKey: "yoko.isChildDevice") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(isChildDevice, forKey: "yoko.isChildDevice") }
+        didSet {
+            UserDefaults.standard.set(isChildDevice, forKey: "yoko.isChildDevice")
+            // Claim/release the household's designated child-device slot so other
+            // linked devices know whether they're the tracking device.
+            if isChildDevice {
+                childDeviceId = deviceId
+            } else if childDeviceId == deviceId {
+                childDeviceId = nil
+            }
+        }
+    }
+
+    /// Set true after a fresh purchase by a parent who hasn't created/linked an
+    /// account yet, so the Home tab can offer a one-time "set up sync" prompt.
+    /// Persisted so the offer survives a relaunch until they create an account.
+    var pendingSyncSetupOffer: Bool = UserDefaults.standard.bool(forKey: "yoko.pendingSyncSetupOffer") {
+        didSet { UserDefaults.standard.set(pendingSyncSetupOffer, forKey: "yoko.pendingSyncSetupOffer") }
+    }
+
+    /// Set true once the one-time "set up sync" prompt has been shown on the Home
+    /// tab. Persisted (not session state) so the prompt only ever appears once,
+    /// whether the parent tapped "Set Up Sync" or "Maybe Later". After that,
+    /// Settings -> Create Parent Account is the only way to reach it.
+    var hasShownSyncPrompt: Bool = UserDefaults.standard.bool(forKey: "yoko.hasShownSyncPrompt") {
+        didSet { UserDefaults.standard.set(hasShownSyncPrompt, forKey: "yoko.hasShownSyncPrompt") }
+    }
+
+    /// Stable identifier for this physical install, used to coordinate which
+    /// device is the designated "child's device" across a linked household. The
+    /// live App Usage card renders only on the device whose id matches
+    /// `childDeviceId` (or when no other device has claimed that role).
+    let deviceId: String = {
+        if let existing = UserDefaults.standard.string(forKey: "yoko.deviceId") { return existing }
+        let fresh = UUID().uuidString
+        UserDefaults.standard.set(fresh, forKey: "yoko.deviceId")
+        return fresh
+    }()
+
+    /// The device id of whichever device has explicitly been marked the child's
+    /// device, synced across the household. `nil` means no device has claimed it
+    /// yet (single-device setups, or multi-device with no explicit choice).
+    var childDeviceId: String? = UserDefaults.standard.string(forKey: "yoko.childDeviceId") {
+        didSet { UserDefaults.standard.set(childDeviceId, forKey: "yoko.childDeviceId") }
     }
 
     /// True when the parent passcode gate is actually active (enabled AND a
@@ -448,6 +490,7 @@ final class AppStore {
             locks: locks.map {
                 SyncLock(name: $0.name, enabled: $0.enabled, earnedMinutesAvailable: $0.earnedMinutesAvailable)
             },
+            childDeviceId: childDeviceId,
             updatedAtEpoch: Date().timeIntervalSince1970
         )
     }
@@ -493,6 +536,12 @@ final class AppStore {
             guard let idx = locks.firstIndex(where: { $0.name == synced.name }) else { continue }
             locks[idx].enabled = synced.enabled
             locks[idx].earnedMinutesAvailable = synced.earnedMinutesAvailable
+        }
+
+        // Adopt the household's designated child device, unless this device has
+        // locally claimed the role itself (a local claim wins for this device).
+        if !isChildDevice {
+            childDeviceId = s.childDeviceId
         }
     }
 

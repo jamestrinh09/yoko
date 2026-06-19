@@ -220,7 +220,7 @@ struct PaywallFlowView: View {
 
 // MARK: - Sign-in sheet (existing accounts)
 
-private struct PaywallLoginSheet: View {
+struct PaywallLoginSheet: View {
     var account: ParentAccountService
     let onSuccess: () -> Void
     @Environment(\.dismiss) private var dismiss
@@ -233,14 +233,8 @@ private struct PaywallLoginSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 18) {
-                    VStack(spacing: 10) {
-                        ZStack {
-                            Circle().fill(DS.Color.accentSoft).frame(width: 72, height: 72)
-                            Image(systemName: "person.crop.circle.badge.checkmark")
-                                .font(.system(size: 28, weight: .bold))
-                                .foregroundStyle(DS.Color.accent)
-                        }
+                VStack(spacing: 14) {
+                    VStack(spacing: 6) {
                         Text("Welcome back")
                             .font(.system(size: 24, weight: .heavy, design: .rounded))
                             .foregroundStyle(DS.Color.textPrimary)
@@ -249,7 +243,7 @@ private struct PaywallLoginSheet: View {
                             .foregroundStyle(DS.Color.textSecondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 4)
 
                     fieldLabel("Email")
                     TextField("you@example.com", text: $email)
@@ -281,7 +275,8 @@ private struct PaywallLoginSheet: View {
                     .opacity(canSubmit ? 1 : 0.6)
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 30)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .background(DS.Color.background.ignoresSafeArea())
             .navigationTitle("Sign In")

@@ -1141,6 +1141,7 @@ struct ParentAccountSheet: View {
     @State private var code: String = ""
     @State private var working: Bool = false
     @State private var justSynced: Bool = false
+    @State private var justCopied: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -1190,7 +1191,7 @@ struct ParentAccountSheet: View {
 
             // Sync code card — share with the other device
             if let codeValue = account.syncCode {
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     Text("SYNC CODE")
                         .font(.dsTiny)
                         .foregroundStyle(DS.Color.textSecondary)
@@ -1199,10 +1200,33 @@ struct ParentAccountSheet: View {
                         .font(.system(size: 38, weight: .heavy, design: .rounded))
                         .foregroundStyle(DS.Color.accent)
                         .tracking(6)
-                    Text("Enter this code on your child's device to link it.")
+                    Text("Enter this code on your other device to link it.")
                         .font(.dsCaption)
                         .foregroundStyle(DS.Color.textSecondary)
                         .multilineTextAlignment(.center)
+
+                    Button {
+                        UIPasteboard.general.string = codeValue
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        justCopied = true
+                        Task { @MainActor in
+                            try? await Task.sleep(for: .seconds(1.5))
+                            justCopied = false
+                        }
+                    } label: {
+                        HStack(spacing: 7) {
+                            Image(systemName: justCopied ? "checkmark" : "doc.on.doc.fill")
+                                .font(.system(size: 14, weight: .bold))
+                            Text(justCopied ? "Copied" : "Copy Code")
+                                .font(.system(size: 15, weight: .bold, design: .rounded))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 11)
+                        .background(DS.Color.accent, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 2)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)

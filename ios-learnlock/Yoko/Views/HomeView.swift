@@ -8,6 +8,14 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppStore.self) private var store
     @Environment(ScreenTimeService.self) private var screenTime
+    @Environment(ParentAccountService.self) private var account
+
+    /// Switches the app to the Settings tab (provided by RootTabView) so the
+    /// parent-device usage note can link straight to the child-device toggle.
+    var onOpenSettings: (() -> Void)? = nil
+
+    @State private var showSyncOffer: Bool = false
+    @State private var showAccountSheet: Bool = false
 
     var body: some View {
         ScrollView {
@@ -15,7 +23,7 @@ struct HomeView: View {
                 greeting
                 weeklyStreakCard
                 quickStatsRow
-                if store.isChildDevice {
+                if showsLiveUsage {
                     AppUsageCard()
                 } else {
                     parentDeviceUsageNote
@@ -28,6 +36,47 @@ struct HomeView: View {
             .padding(.top, 12)
         }
         .dsScreenBackground()
+        .onAppear(perform: maybeOfferSyncSetup)
+        .onChange(of: account.isLinked) { _, linked in
+            if linked { store.pendingSyncSetupOffer = false }
+        }
+        .sheet(isPresented: $showSyncOffer) {
+            SyncSetupOfferSheet(
+                onSetUp: {
+                    showSyncOffer = false
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(350))
+                        showAccountSheet = true
+                    }
+                },
+                onLater: { showSyncOffer = false }
+            )
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showAccountSheet) {
+            ParentAccountSheet()
+                .presentationDetents([.large])
+        }
+    }
+
+    /// Shows the one-time sync-setup offer the first time a fresh-purchase parent
+    /// (no account yet) lands on Home. Skipped for signed-in/linked parents and
+    /// permanently after it has been shown once (persisted, not session state).
+    private func maybeOfferSyncSetup() {
+        guard store.pendingSyncSetupOffer, !account.isLinked, !store.hasShownSyncPrompt else { return }
+        store.hasShownSyncPrompt = true
+        showSyncOffer = true
+    }
+
+    /// Whether to render the live App Usage card on this device.
+    /// - Single-device household (never linked): always live.
+    /// - Linked household: only the device whose id matches the designated child
+    ///   device shows live data; if no device has been explicitly marked yet,
+    ///   default to showing live data here rather than hiding it.
+    private var showsLiveUsage: Bool {
+        guard account.isLinked else { return true }
+        if let childId = store.childDeviceId { return childId == store.deviceId }
+        return true
     }
 
     // MARK: - Greeting
@@ -194,6 +243,21 @@ struct HomeView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 6)
+
+            if let onOpenSettings {
+                Button(action: onOpenSettings) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Change in Settings")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .foregroundStyle(DS.Color.accent)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(18)
         .background(DS.Color.surface)
@@ -277,6 +341,64 @@ struct HomeView: View {
             }
             .dsCard(padding: 18)
         }
+    }
+}
+
+/// One-time, dismissible prompt offering to set up cross-device sync after a
+/// fresh purchase. "Set Up Sync" opens the existing Create Parent Account flow.
+private struct SyncSetupOfferSheet: View {
+    let onSetUp: () -> Void
+    let onLater: () -> Void
+
+    var body: some View {
+        VStack(spacing: 20) {
+            VStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(DS.Color.accentSoft).frame(width: 70, height: 70)
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(DS.Color.accent)
+                }
+                Text("Set up sync across your devices")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DS.Color.textPrimary)
+                    .multilineTextAlignment(.center)
+                Text("Takes 30 seconds. Watch progress and manage locks from your phone while your child learns on theirs.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(DS.Color.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.top, 28)
+
+            Spacer(minLength: 0)
+
+            VStack(spacing: 12) {
+                Button(action: onSetUp) {
+                    Text("Set Up Sync")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 17)
+                        .background(DS.Color.accent)
+                        .clipShape(.rect(cornerRadius: 18))
+                        .shadow(color: DS.Color.accent.opacity(0.35), radius: 16, y: 8)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onLater) {
+                    Text("Maybe Later")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(DS.Color.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.bottom, 18)
+        .frame(maxWidth: .infinity)
+        .background(DS.Color.background.ignoresSafeArea())
     }
 }
 

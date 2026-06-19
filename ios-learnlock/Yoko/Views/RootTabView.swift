@@ -39,7 +39,7 @@ struct RootTabView: View {
 
             Group {
                 switch selection {
-                case .home: HomeView()
+                case .home: HomeView(onOpenSettings: { selection = .settings })
                 case .learn: LearnView(hideDock: $hideDock)
                 case .locks: LocksView()
                 case .rewards: RewardsView()

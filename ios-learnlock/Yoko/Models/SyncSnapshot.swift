@@ -27,6 +27,10 @@ nonisolated struct SyncSnapshot: Codable, Sendable {
     var achievements: [SyncAchievement]
     var subjects: [SyncSubject]
     var locks: [SyncLock]
+    /// Stable id of the device explicitly marked the child's device (the one that
+    /// renders live usage analytics). Optional for backward compatibility with
+    /// snapshots created before multi-device coordination existed.
+    var childDeviceId: String?
     var updatedAtEpoch: Double
 }
 
