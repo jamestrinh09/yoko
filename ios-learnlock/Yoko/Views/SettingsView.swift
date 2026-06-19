@@ -20,6 +20,9 @@ struct SettingsView: View {
     @State private var showContactSupport: Bool = false
     @State private var showParentAccount: Bool = false
     @State private var showSetPasscode: Bool = false
+    @State private var showAppLockedPreview: Bool = false
+    @State private var devToolsRevealed: Bool = false
+    @State private var headerTapCount: Int = 0
 
     var body: some View {
         ScrollView {
@@ -34,7 +37,10 @@ struct SettingsView: View {
                 togglesSection
                 permissionsSection
                 supportSection
-                resetOnboardingButton
+                if devToolsRevealed {
+                    appLockedPreviewButton
+                    resetOnboardingButton
+                }
                 
                 Text("Yoko 1.0")
                     .font(.dsCaption)
@@ -54,6 +60,20 @@ struct SettingsView: View {
                         .navigationBarTitleDisplayMode(.inline)
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showAppLockedPreview) {
+            AppLockedView(onLearn: { showAppLockedPreview = false })
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        showAppLockedPreview = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(DS.Color.textTertiary)
+                            .padding(20)
+                    }
+                    .buttonStyle(.plain)
+                }
         }
         .sheet(isPresented: $showGradePicker) {
             GradeLevelPickerSheet(currentGrade: store.profile.grade) { newGrade in
@@ -229,6 +249,51 @@ struct SettingsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 8)
+        .contentShape(Rectangle())
+        .onTapGesture { registerHeaderTap() }
+    }
+
+    /// Tapping the Settings title 10 times reveals the hidden developer tools
+    /// (app-locked preview + reset onboarding).
+    private func registerHeaderTap() {
+        guard !devToolsRevealed else { return }
+        headerTapCount += 1
+        if headerTapCount >= 10 {
+            withAnimation(.spring(duration: 0.4)) { devToolsRevealed = true }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+    }
+
+    private var appLockedPreviewButton: some View {
+        Button {
+            showAppLockedPreview = true
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(DS.Color.accent)
+                    .frame(width: 36, height: 36)
+                    .background(DS.Color.accentSoft)
+                    .clipShape(.rect(cornerRadius: 10))
+                Text("Preview App-Locked Screen")
+                    .font(.dsHeadline)
+                    .foregroundStyle(DS.Color.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DS.Color.textTertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity)
+            .background(DS.Color.surface)
+            .clipShape(.rect(cornerRadius: DS.Radius.large))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.large)
+                    .stroke(DS.Color.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var profileCard: some View {

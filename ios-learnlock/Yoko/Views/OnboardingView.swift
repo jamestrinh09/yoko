@@ -73,6 +73,7 @@ struct OnboardingView: View {
 
             VStack(spacing: 0) {
                 topBar(tintWhite: isGradientStep)
+                    .zIndex(1)
 
                 ScrollView(showsIndicators: false) {
                     currentStepContent
@@ -82,6 +83,7 @@ struct OnboardingView: View {
                         .padding(.top, 16)
                         .padding(.bottom, 24)
                 }
+                .scrollClipDisabled()
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -948,7 +950,8 @@ struct OnboardingView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, 8)
                 .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 8)
-                .offset(y: -65)
+                .offset(y: -75)
+                .zIndex(-1)
 
             VStack(spacing: 10) {
                 Text("Turn on notifications")
@@ -962,7 +965,7 @@ struct OnboardingView: View {
                     .lineSpacing(4)
             }
             .padding(.horizontal, 8)
-            .offset(y: -110)
+            .offset(y: -125)
 
             VStack(spacing: 0) {
                 permissionRow(
@@ -990,7 +993,7 @@ struct OnboardingView: View {
                 RoundedRectangle(cornerRadius: DS.Radius.large)
                     .stroke(DS.Color.border, lineWidth: 1)
             )
-            .offset(y: -90)
+            .offset(y: -105)
         }
         .padding(.top, 12)
     }
@@ -1091,6 +1094,7 @@ struct DemoQuestionScreen: View {
     @State private var unscramble = UnscrambleState()
     @State private var hint = QuestionHintState()
     @State private var contentOpacity: Double = 1
+    @State private var hintTimerTask: Task<Void, Never>?
 
     enum DemoMascotMood { case happy, thinking, determined, excited, sad }
 
@@ -1155,6 +1159,9 @@ struct DemoQuestionScreen: View {
                     topBar
                 }
                 .opacity(isReady ? 1 : 0)
+                .overlay(alignment: .topTrailing) {
+                    if isReady { skipButton }
+                }
 
                 if !isReady {
                     ProgressView()
@@ -1176,6 +1183,7 @@ struct DemoQuestionScreen: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 gifReady = true
             }
+            armHintAfterDelay()
         }
         .onChange(of: questionNum) { _, _ in
             resetForQuestion()
@@ -1199,7 +1207,61 @@ struct DemoQuestionScreen: View {
                 evaluate()
             }
         }
-        .onDisappear { advanceTask?.cancel() }
+        .onDisappear {
+            advanceTask?.cancel()
+            hintTimerTask?.cancel()
+        }
+    }
+
+    /// Small skip control docked in the top-right of every demo question so a
+    /// parent can move past the sample without answering.
+    private var skipButton: some View {
+        Button(action: onContinue) {
+            HStack(spacing: 3) {
+                Text("Skip")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .heavy))
+            }
+            .foregroundStyle(DS.Color.textSecondary)
+            .padding(.horizontal, 13)
+            .padding(.vertical, 7)
+            .background(.white.opacity(0.92))
+            .clipShape(.capsule)
+            .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, 16)
+        .padding(.top, 6)
+    }
+
+    /// Belt-and-suspenders hint arming for the demo: 5s after a question
+    /// appears (and after each question swap), surface the matching hint button
+    /// so it is never missed. The renderer also configures the hint content
+    /// (which wrong choice to fade / unscramble reveal); this just guarantees
+    /// the button becomes visible.
+    private func armHintAfterDelay() {
+        hintTimerTask?.cancel()
+        let isUnscramble = normalized.templateType.snakeKey == "unscramble_word"
+        hintTimerTask = Task {
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                if isUnscramble {
+                    guard unscramble.active, !unscramble.hintRevealed else { return }
+                    unscramble.hintAvailable = true
+                    withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                        unscramble.hintGlow = true
+                    }
+                } else {
+                    guard hint.active, !hint.revealed else { return }
+                    hint.available = true
+                    withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                        hint.glow = true
+                    }
+                }
+            }
+        }
     }
 
     /// Resets per-question state and fades the card's inner content back in.
@@ -1214,6 +1276,7 @@ struct DemoQuestionScreen: View {
         mascotMood = initialMood()
         contentOpacity = 0
         withAnimation(.easeIn(duration: 0.3)) { contentOpacity = 1 }
+        armHintAfterDelay()
     }
 
     private func initialMood() -> DemoMascotMood {
@@ -2089,7 +2152,7 @@ struct CommitmentScreen: View {
 
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 18) {
-                            MascotGIF(url: GIFAssets.glasses, size: 161)
+                            MascotGIF(url: GIFAssets.glasses, size: 177)
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 2)
 

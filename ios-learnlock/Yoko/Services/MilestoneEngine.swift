@@ -34,14 +34,26 @@ nonisolated enum MilestoneEngine {
     static let monthlyMaster  = Achievement(title: "Monthly Master 📅", detail: "Reach a 30-day streak", symbol: "trophy.fill", unlocked: true)
     static let scholar        = Achievement(title: "Scholar 🦉", detail: "Earn 1,000 lifetime XP", symbol: "brain.fill", unlocked: true)
     static let bigBrain       = Achievement(title: "Big Brain 🧩", detail: "Earn 5,000 lifetime XP", symbol: "puzzlepiece.fill", unlocked: true)
+    static let quickLearner   = Achievement(title: "Quick Learner 🐇", detail: "Finish 3 lessons", symbol: "hare.fill", unlocked: true)
+    static let numberNinja    = Achievement(title: "Number Ninja 🥷", detail: "Finish 10 math lessons", symbol: "number.square.fill", unlocked: true)
+    static let bookworm       = Achievement(title: "Bookworm 📕", detail: "Finish 10 English lessons", symbol: "text.book.closed.fill", unlocked: true)
+    static let halfwayHero    = Achievement(title: "Halfway Hero 🏅", detail: "Finish 75 lessons", symbol: "medal.fill", unlocked: true)
+    static let legend         = Achievement(title: "Legend 👑", detail: "Finish 200 lessons", symbol: "crown.fill", unlocked: true)
+    static let brainiac       = Achievement(title: "Brainiac 💡", detail: "Earn 2,500 lifetime XP", symbol: "lightbulb.fill", unlocked: true)
+    static let genius         = Achievement(title: "Genius 🎓", detail: "Earn 10,000 lifetime XP", symbol: "graduationcap.circle.fill", unlocked: true)
+    static let marathoner     = Achievement(title: "Marathoner 🏃", detail: "Reach a 21-day streak", symbol: "figure.run", unlocked: true)
+    static let sharpshooter   = Achievement(title: "Sharpshooter 🎯", detail: "Keep 95% accuracy over 20 lessons", symbol: "scope", unlocked: true)
+    static let dedicated      = Achievement(title: "Dedicated 📆", detail: "Learn for 30 days", symbol: "calendar.circle.fill", unlocked: true)
 
     /// Every achievement in display order. Used to seed the locked grid so the
     /// Rewards tab shows the full set of unlockable badges from day one.
     static let catalog: [Achievement] = [
-        firstStep, sharpStart, sharpMind, committed, risingStar, centuryClub,
-        hatTrick, perfectionist, flawless, streakStarter, weekWarrior, unstoppable,
-        monthlyMaster, mathWhiz, mathMaster, wordWizard, storyMaster,
-        scholar, bigBrain, gradeGraduate
+        firstStep, quickLearner, sharpStart, sharpMind, committed, halfwayHero,
+        risingStar, centuryClub, legend,
+        hatTrick, perfectionist, flawless, sharpshooter,
+        streakStarter, weekWarrior, unstoppable, marathoner, monthlyMaster, dedicated,
+        mathWhiz, numberNinja, mathMaster, wordWizard, bookworm, storyMaster,
+        scholar, brainiac, bigBrain, genius, gradeGraduate
     ]
 
     /// The catalog rendered as locked placeholders for the initial Rewards grid.
@@ -83,6 +95,16 @@ nonisolated enum MilestoneEngine {
 
         // Achievement triggers checked on every completion.
         if profile.totalLessonsCompleted == 1 { award(firstStep) }
+        if profile.totalLessonsCompleted == 3 { award(quickLearner) }
+        if profile.totalLessonsCompleted == 75 { award(halfwayHero) }
+        if profile.totalLessonsCompleted == 200 { award(legend) }
+        if mathLessonsCompleted == 10 { award(numberNinja) }
+        if englishLessonsCompleted == 10 { award(bookworm) }
+        if profile.streak == 21 { award(marathoner) }
+        if profile.lifetimeXP >= 2500 { award(brainiac) }
+        if profile.lifetimeXP >= 10000 { award(genius) }
+        if profile.daysSinceStart >= 30 { award(dedicated) }
+        if profile.overallAccuracy >= 0.95, profile.totalLessonsCompleted >= 20 { award(sharpshooter) }
         if profile.perfectLessons == 3 { award(hatTrick) }
         if profile.perfectLessons == 5 { award(perfectionist) }
         if profile.streak == 3 { award(streakStarter) }
