@@ -572,6 +572,89 @@ final class AppStore {
         subjects[i].weakSkills = Array(weak)
     }
 
+    // MARK: - Demo data (App Store screenshots)
+
+    /// Populates the app with realistic demo data showing ~16 days of usage.
+    /// Intended for App Store screenshots only — revert before shipping.
+    func applyDemoData() {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let startDate = calendar.date(byAdding: .day, value: -16, to: today)!
+        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
+
+        // ── Profile ──────────────────────────────────────────────
+        profile.name = "James"
+        profile.grade = 1
+        profile.currentGrade = .grade1
+        profile.streak = 9
+        profile.dailyMinuteGoal = 30
+        profile.minutesLearnedToday = 22
+        profile.lessonsCompletedToday = 3
+        profile.earnedScreenTimeMinutes = 45
+        profile.totalXP = 2350
+        profile.lifetimeXP = 2350
+        profile.totalLessonsCompleted = 18
+        profile.perfectLessons = 4
+        profile.freeUnlockMinutesAvailable = 15
+        profile.totalCorrectAnswers = 46
+        profile.totalAnswersGiven = 54
+        profile.startDate = startDate
+        profile.lastLessonDate = today
+
+        // ── Weekly minutes (Mon–Sun) ─────────────────────────────
+        weeklyMinutes = [25, 30, 20, 35, 0, 15, 22]
+
+        // ── Locks — enable YouTube & Roblox with earned time ────
+        if let ytIdx = locks.firstIndex(where: { $0.name == "YouTube" }) {
+            locks[ytIdx].enabled = true
+            locks[ytIdx].earnedMinutesAvailable = 20
+        }
+        if let rbIdx = locks.firstIndex(where: { $0.name == "Roblox" }) {
+            locks[rbIdx].enabled = true
+            locks[rbIdx].earnedMinutesAvailable = 35
+        }
+        if let ttIdx = locks.firstIndex(where: { $0.name == "TikTok" }) {
+            locks[ttIdx].enabled = true
+            locks[ttIdx].earnedMinutesAvailable = 10
+        }
+
+        // ── Achievements — unlock the first ~8 badges ───────────
+        let titlesToUnlock: Set<String> = [
+            "First Step 👣", "Quick Learner 🐇", "Sharp Start ⚡",
+            "Sharp Mind 🧠", "Hat Trick 🎩", "Streak Starter 🔥",
+            "Week Warrior ⚡", "Committed 💪"
+        ]
+        var unlockedBadges: [Achievement] = MilestoneEngine.catalog.compactMap {
+            guard titlesToUnlock.contains($0.title) else { return nil }
+            var a = $0
+            a.unlocked = true
+            return a
+        }
+        // Also show the full locked catalog so the grid has all cards.
+        for a in MilestoneEngine.catalog where !titlesToUnlock.contains(a.title) {
+            var locked = a
+            locked.unlocked = false
+            unlockedBadges.append(locked)
+        }
+        achievements = unlockedBadges
+        profile.achievements = unlockedBadges.filter(\.unlocked)
+
+        // ── Subjects — mark several lessons as completed ────────
+        for i in subjects.indices {
+            let toComplete = min(9, subjects[i].lessons.count)
+            for j in 0..<toComplete {
+                subjects[i].lessons[j].completed = true
+                subjects[i].lessons[j].bestScore = [80, 100, 100, 60, 100, 80, 100, 100, 80][min(j, 8)]
+            }
+            subjects[i].xp = subjects[i].subject == .math ? 1400 : 950
+        }
+
+        // ── Update active child name if it exists ───────────────
+        if let idx = children.firstIndex(where: { $0.id == activeChildId }) {
+            children[idx].name = "James"
+        }
+    }
+
     // MARK: - Lesson queue
 
     private func refillQueueIfNeeded(subjectIndex i: Int) {

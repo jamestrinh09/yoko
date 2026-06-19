@@ -23,6 +23,7 @@ struct SettingsView: View {
     @State private var showAppLockedPreview: Bool = false
     @State private var devToolsRevealed: Bool = false
     @State private var headerTapCount: Int = 0
+    @State private var showDemoDataToast: Bool = false
 
     var body: some View {
         ScrollView {
@@ -39,6 +40,7 @@ struct SettingsView: View {
                 supportSection
                 if devToolsRevealed {
                     appLockedPreviewButton
+                    demoToolsSection
                     resetOnboardingButton
                 }
                 
@@ -324,6 +326,53 @@ struct SettingsView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Demo data (App Store screenshots)
+
+    private var demoToolsSection: some View {
+        VStack(spacing: 10) {
+            Button {
+                store.applyDemoData()
+                withAnimation(.spring(duration: 0.4)) {
+                    showDemoDataToast = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        showDemoDataToast = false
+                    }
+                }
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .frame(width: 36, height: 36)
+                        .background(Color.orange.opacity(0.15))
+                        .clipShape(.rect(cornerRadius: 10))
+                    Text("Load Demo Data")
+                        .font(.dsHeadline)
+                        .foregroundStyle(DS.Color.textPrimary)
+                    Spacer()
+                    if showDemoDataToast {
+                        Text("Loaded 16 days of usage")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.orange)
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(DS.Color.surface)
+                .clipShape(.rect(cornerRadius: DS.Radius.large))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.large)
+                        .stroke(DS.Color.border, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     private var profileCard: some View {
