@@ -10,7 +10,9 @@ import FamilyControls
 struct OnboardingView: View {
     @Environment(AppStore.self) private var store
     @Environment(ScreenTimeService.self) private var screenTime
+    @Environment(StoreViewModel.self) private var storeVM
     @State private var step: Int = 1
+    @State private var showPaywall: Bool = false
     @State private var childName: String = ""
     @State private var grade: String = ""
     @State private var screenStruggle: String = ""
@@ -45,6 +47,18 @@ struct OnboardingView: View {
             imageLoaded3 = false
             imageLoaded11 = false
             imageLoaded13 = false
+        }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallFlowView(
+                childName: childName,
+                store: storeVM,
+                onComplete: {
+                    // Advance underneath the cover so Step 21 is already in place
+                    // when it dismisses — no flash of the pre-paywall screen.
+                    step = min(step + 1, totalSteps)
+                    showPaywall = false
+                }
+            )
         }
     }
 
@@ -223,7 +237,7 @@ struct OnboardingView: View {
         case 19:
             PrimaryButton(label: "Continue", action: nextStep)
         case 20:
-            PrimaryButton(label: "Continue", action: nextStep, variant: .white)
+            PrimaryButton(label: "Continue", action: presentPaywall, variant: .white)
         case 21:
             VStack(spacing: 12) {
                 PrimaryButton(
@@ -252,6 +266,13 @@ struct OnboardingView: View {
         withAnimation(.spring(duration: 0.35)) {
             step = min(step + 1, totalSteps)
         }
+    }
+
+    /// Presents the 3-step subscription paywall after the pre-paywall hype screen
+    /// (Step 20). On success the paywall advances onboarding to the next step.
+    private func presentPaywall() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        showPaywall = true
     }
 
     private func validateAndNext4() {

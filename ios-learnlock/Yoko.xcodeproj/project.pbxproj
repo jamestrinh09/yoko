@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		XX298127CFBB2CF3FA631BXX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,29 +33,12 @@
 		105FC5932E9EAD3200EA8BCF /* YokoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YokoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		105FC57C2E9EAD3100EA8BCF /* Yoko */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Yoko;
-			sourceTree = "<group>";
-		};
-		105FC58C2E9EAD3200EA8BCF /* YokoTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = YokoTests;
-			sourceTree = "<group>";
-		};
-		105FC5962E9EAD3200EA8BCF /* YokoUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = YokoUITests;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFrameworksBuildPhase section */
 		105FC5772E9EAD3100EA8BCF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				XX298127CFBB2CF3FA631BXX /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -70,6 +57,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		105FC57C2E9EAD3100EA8BCF /* Yoko */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Yoko;
+			sourceTree = "<group>";
+		};
+		105FC58C2E9EAD3200EA8BCF /* YokoTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = YokoTests;
+			sourceTree = "<group>";
+		};
+		105FC5962E9EAD3200EA8BCF /* YokoUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = YokoUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXGroup section */
 		105FC5712E9EAD3100EA8BCF = {
@@ -112,6 +117,7 @@
 			);
 			name = Yoko;
 			packageProductDependencies = (
+				XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */,
 			);
 			productName = Yoko;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* Yoko.app */;
@@ -204,6 +210,9 @@
 				105FC5792E9EAD3100EA8BCF /* Yoko */,
 				105FC5882E9EAD3200EA8BCF /* YokoTests */,
 				105FC5922E9EAD3200EA8BCF /* YokoUITests */,
+			);
+			packageReferences = (
+				XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 		};
 /* End PBXProject section */
@@ -583,6 +592,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 105FC5722E9EAD3100EA8BCF /* Project object */;
 }
