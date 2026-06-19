@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		XX298127CFBB2CF3FA631BXX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */; };
+		7A99EE0142C0FFEE00DA000B /* AppUsageReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -25,12 +26,34 @@
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
 			remoteInfo = Yoko;
 		};
+		7A99EE0142C0FFEE00DA000D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7A99EE0142C0FFEE00DA0001;
+			remoteInfo = AppUsageReportExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7A99EE0142C0FFEE00DA000A /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				7A99EE0142C0FFEE00DA000B /* AppUsageReportExtension.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		105FC57A2E9EAD3100EA8BCF /* Yoko.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yoko.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5892E9EAD3200EA8BCF /* YokoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YokoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5932E9EAD3200EA8BCF /* YokoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YokoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = AppUsageReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,7 +79,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A99EE0142C0FFEE00DA0005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7A99EE0142C0FFEE00DA000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		105FC57C2E9EAD3100EA8BCF /* Yoko */ = {
@@ -74,6 +114,14 @@
 			path = YokoUITests;
 			sourceTree = "<group>";
 		};
+		7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				7A99EE0142C0FFEE00DA000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
+			);
+			path = AppUsageReportExtension;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXGroup section */
@@ -81,6 +129,7 @@
 			isa = PBXGroup;
 			children = (
 				105FC57C2E9EAD3100EA8BCF /* Yoko */,
+				7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */,
 				105FC58C2E9EAD3200EA8BCF /* YokoTests */,
 				105FC5962E9EAD3200EA8BCF /* YokoUITests */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
@@ -93,6 +142,7 @@
 				105FC57A2E9EAD3100EA8BCF /* Yoko.app */,
 				105FC5892E9EAD3200EA8BCF /* YokoTests.xctest */,
 				105FC5932E9EAD3200EA8BCF /* YokoUITests.xctest */,
+				7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -107,10 +157,12 @@
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
 				105FC5782E9EAD3100EA8BCF /* Resources */,
+				7A99EE0142C0FFEE00DA000A /* Embed ExtensionKit Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				7A99EE0142C0FFEE00DA000C /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				105FC57C2E9EAD3100EA8BCF /* Yoko */,
@@ -122,6 +174,28 @@
 			productName = Yoko;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* Yoko.app */;
 			productType = "com.apple.product-type.application";
+		};
+		7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A99EE0142C0FFEE00DA0007 /* Build configuration list for PBXNativeTarget "AppUsageReportExtension" */;
+			buildPhases = (
+				7A99EE0142C0FFEE00DA0004 /* Sources */,
+				7A99EE0142C0FFEE00DA0005 /* Frameworks */,
+				7A99EE0142C0FFEE00DA0006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */,
+			);
+			name = AppUsageReportExtension;
+			packageProductDependencies = (
+			);
+			productName = AppUsageReportExtension;
+			productReference = 7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
 		};
 		105FC5882E9EAD3200EA8BCF /* YokoTests */ = {
 			isa = PBXNativeTarget;
@@ -182,6 +256,9 @@
 					105FC5792E9EAD3100EA8BCF = {
 						CreatedOnToolsVersion = 26.0;
 					};
+					7A99EE0142C0FFEE00DA0001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
 					105FC5882E9EAD3200EA8BCF = {
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 105FC5792E9EAD3100EA8BCF;
@@ -208,6 +285,7 @@
 			projectRoot = "";
 			targets = (
 				105FC5792E9EAD3100EA8BCF /* Yoko */,
+				7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */,
 				105FC5882E9EAD3200EA8BCF /* YokoTests */,
 				105FC5922E9EAD3200EA8BCF /* YokoUITests */,
 			);
@@ -239,6 +317,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		7A99EE0142C0FFEE00DA0006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -257,6 +342,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		105FC58F2E9EAD3200EA8BCF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A99EE0142C0FFEE00DA0004 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -552,6 +644,66 @@
 			};
 			name = Release;
 		};
+		7A99EE0142C0FFEE00DA0008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CODE_SIGN_ENTITLEMENTS = AppUsageReportExtension/AppUsageReportExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppUsageReportExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "App Usage";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.AppUsageReportExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		7A99EE0142C0FFEE00DA0009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CODE_SIGN_ENTITLEMENTS = AppUsageReportExtension/AppUsageReportExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = AppUsageReportExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "App Usage";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.AppUsageReportExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -587,6 +739,15 @@
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
 				105FC5A52E9EAD3200EA8BCF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7A99EE0142C0FFEE00DA0007 /* Build configuration list for PBXNativeTarget "AppUsageReportExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7A99EE0142C0FFEE00DA0008 /* Debug */,
+				7A99EE0142C0FFEE00DA0009 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

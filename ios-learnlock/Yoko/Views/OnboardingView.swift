@@ -53,10 +53,10 @@ struct OnboardingView: View {
                 childName: childName,
                 store: storeVM,
                 onComplete: {
-                    // Advance underneath the cover so Step 21 is already in place
-                    // when it dismisses — no flash of the pre-paywall screen.
-                    step = min(step + 1, totalSteps)
+                    // The paywall is now the final gate (shown after the commitment
+                    // step). Completing it finishes onboarding and swaps to the app.
                     showPaywall = false
+                    completeOnboarding()
                 }
             )
         }
@@ -74,7 +74,7 @@ struct OnboardingView: View {
             onBack: {
                 withAnimation(.spring(duration: 0.3)) { step = max(1, step - 1) }
             },
-            onComplete: completeOnboarding
+            onComplete: presentPaywall
         )
     }
 
@@ -237,7 +237,7 @@ struct OnboardingView: View {
         case 19:
             PrimaryButton(label: "Continue", action: nextStep)
         case 20:
-            PrimaryButton(label: "Continue", action: presentPaywall, variant: .white)
+            PrimaryButton(label: "Continue", action: nextStep, variant: .white)
         case 21:
             VStack(spacing: 12) {
                 PrimaryButton(
@@ -268,8 +268,8 @@ struct OnboardingView: View {
         }
     }
 
-    /// Presents the 3-step subscription paywall after the pre-paywall hype screen
-    /// (Step 20). On success the paywall advances onboarding to the next step.
+    /// Presents the 3-step subscription paywall as the final onboarding gate,
+    /// right after the commitment step. On success the paywall finishes onboarding.
     private func presentPaywall() {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         showPaywall = true

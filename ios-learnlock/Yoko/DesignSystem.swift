@@ -13,6 +13,9 @@ enum DS {
         static let accent = SwiftUI.Color(red: 1.000, green: 0.478, blue: 0.000)        // #FF7A00
         static let accentSoft = SwiftUI.Color(red: 1.000, green: 0.957, blue: 0.910)    // accent 8%
         static let accentMid  = SwiftUI.Color(red: 1.000, green: 0.871, blue: 0.733)    // accent 25%
+        // Warm orange → cream brand gradient (used by the App Usage card & segmented control).
+        static let brandGradientStart = SwiftUI.Color(red: 1.000, green: 0.478, blue: 0.000) // warm orange #FF7A00
+        static let brandGradientEnd   = SwiftUI.Color(red: 1.000, green: 0.925, blue: 0.831) // cream #FFECD4
         static let textPrimary = SwiftUI.Color(red: 0.122, green: 0.122, blue: 0.122)   // #1F1F1F
         static let textSecondary = SwiftUI.Color(red: 0.420, green: 0.420, blue: 0.420) // #6B6B6B
         static let textTertiary = SwiftUI.Color(red: 0.620, green: 0.620, blue: 0.620)

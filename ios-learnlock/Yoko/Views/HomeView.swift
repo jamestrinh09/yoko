@@ -7,13 +7,15 @@ import SwiftUI
 
 struct HomeView: View {
     @Environment(AppStore.self) private var store
+    @Environment(ScreenTimeService.self) private var screenTime
 
     var body: some View {
         ScrollView {
             VStack(spacing: 22) {
                 greeting
-                progressCard
+                weeklyStreakCard
                 quickStatsRow
+                AppUsageCard()
                 activeLocksSection
                 rewardsPreview
                 Spacer(minLength: 100)
@@ -37,18 +39,18 @@ struct HomeView: View {
                     .foregroundStyle(DS.Color.textPrimary)
             }
             Spacer()
-            HStack(spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(DS.Color.accent)
-                Text("\(store.profile.streak)")
-                    .font(.dsHeadline)
-                    .foregroundStyle(DS.Color.textPrimary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(DS.Color.accentSoft)
-            .clipShape(.capsule)
+            // App icon mark (replaces the old streak capsule — the streak now
+            // lives in its own weekly card below).
+            Image("AppMark")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 46, height: 46)
+                .clipShape(.rect(cornerRadius: 13))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 13)
+                        .stroke(DS.Color.border, lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 7, y: 3)
         }
         .padding(.top, 8)
     }
@@ -71,36 +73,94 @@ struct HomeView: View {
         return "Good evening"
     }
 
-    // MARK: - Progress
+    // MARK: - Weekly streak
 
-    private var progressCard: some View {
-        HStack(spacing: 18) {
-            ZStack {
-                ProgressRing(progress: store.dailyProgress, size: 96, lineWidth: 10)
-                VStack(spacing: 0) {
-                    Text("\(Int(store.dailyProgress * 100))%")
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .foregroundStyle(DS.Color.textPrimary)
-                    Text("today")
-                        .font(.dsTiny)
+    /// White card with a soft orange glow behind it, showing the current streak
+    /// and which days this week the child has learned.
+    private var weeklyStreakCard: some View {
+        VStack(spacing: 18) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(DS.Color.accentSoft).frame(width: 42, height: 42)
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(DS.Color.accent)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Weekly Streak")
+                        .font(.dsCaption)
                         .foregroundStyle(DS.Color.textSecondary)
+                    HStack(alignment: .lastTextBaseline, spacing: 5) {
+                        Text("\(store.profile.streak)")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .foregroundStyle(DS.Color.textPrimary)
+                        Text(store.profile.streak == 1 ? "day" : "days")
+                            .font(.dsCallout)
+                            .foregroundStyle(DS.Color.textSecondary)
+                    }
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 0) {
+                ForEach(weekActivity) { day in
+                    VStack(spacing: 7) {
+                        ZStack {
+                            Circle()
+                                .fill(day.active ? DS.Color.accent : DS.Color.surface)
+                                .frame(width: 30, height: 30)
+                                .overlay(
+                                    Circle().stroke(day.active ? Color.clear : DS.Color.border, lineWidth: 1.5)
+                                )
+                            if day.active {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .heavy))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .overlay {
+                            if day.isToday {
+                                Circle()
+                                    .stroke(DS.Color.accent, lineWidth: 2)
+                                    .frame(width: 38, height: 38)
+                            }
+                        }
+                        .frame(height: 38)
+                        Text(day.label)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(day.isToday ? DS.Color.accent : DS.Color.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Daily Goal")
-                    .font(.dsCaption)
-                    .foregroundStyle(DS.Color.textSecondary)
-                Text("\(store.profile.minutesLearnedToday) / \(store.profile.dailyMinuteGoal) min")
-                    .font(.dsTitle2)
-                    .foregroundStyle(DS.Color.textPrimary)
-                Text("Keep going to earn more screen time")
-                    .font(.dsCaption)
-                    .foregroundStyle(DS.Color.textSecondary)
-                    .padding(.top, 2)
-            }
-            Spacer()
         }
-        .dsCard(padding: 22)
+        .padding(22)
+        .background(DS.Color.surface)
+        .clipShape(.rect(cornerRadius: DS.Radius.large))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.large)
+                .stroke(DS.Color.border, lineWidth: 1)
+        )
+        // Subtle orange glow behind the white card.
+        .shadow(color: DS.Color.accent.opacity(0.28), radius: 20, y: 8)
+        .shadow(color: DS.Color.accent.opacity(0.10), radius: 5, y: 2)
+    }
+
+    /// The 7 days of the current week (Mon–Sun) with whether the child learned
+    /// that day, derived from `weeklyMinutes`, plus a today marker.
+    private var weekActivity: [DayActivity] {
+        let labels = ["M", "T", "W", "T", "F", "S", "S"]
+        let weekday = Calendar.current.component(.weekday, from: Date()) // 1=Sun...7=Sat
+        let todayIndex = (weekday + 5) % 7 // Monday-based 0...6
+        return (0..<7).map { i in
+            let minutes = i < store.weeklyMinutes.count ? store.weeklyMinutes[i] : 0
+            return DayActivity(
+                id: i,
+                label: labels[i],
+                active: minutes > 0 || (i == todayIndex && store.profile.minutesLearnedToday > 0),
+                isToday: i == todayIndex
+            )
+        }
     }
 
     // MARK: - Stats
@@ -176,6 +236,14 @@ struct HomeView: View {
             .dsCard(padding: 18)
         }
     }
+}
+
+/// One day cell in the weekly streak card.
+private struct DayActivity: Identifiable {
+    let id: Int
+    let label: String
+    let active: Bool
+    let isToday: Bool
 }
 
 private struct HomeLockRow: View {

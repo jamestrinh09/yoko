@@ -241,11 +241,11 @@ private struct PaywallReminderStep: View {
                         .lineSpacing(2)
                         .padding(.top, 18)
 
-                    // Custom Step 2 mascot: Yoko ringing a bell.
+                    // Custom Step 2 mascot: Yoko ringing a bell (10% larger).
                     Image("PaywallBellHero")
                         .resizable()
                         .scaledToFit()
-                        .frame(height: 300)
+                        .frame(height: 330)
                         .rotationEffect(.degrees(swing ? 3 : -3), anchor: .top)
                         .shadow(color: .black.opacity(0.08), radius: 16, y: 10)
                 }
