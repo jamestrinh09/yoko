@@ -158,6 +158,7 @@ final class AppStore {
         self.profile.currentGrade = CurriculumGenerator.gradeBand(for: 1)
         self.profile.startDate = Date()
         self.parentPasscode = Keychain.get("yoko.parentPasscode")
+        if demoDataActive { applyDemoData() }
     }
 
     // MARK: - Children
@@ -575,8 +576,17 @@ final class AppStore {
     // MARK: - Demo data (App Store screenshots)
 
     /// Populates the app with realistic demo data showing ~16 days of usage.
+    /// When true, demo data re-applies every launch. Set by the hidden dev tools
+    /// button in Settings; cleared manually by undoing the prompt or deleting the
+    /// key. Intended for App Store screenshots only — revert before shipping.
+    var demoDataActive: Bool = UserDefaults.standard.bool(forKey: "yoko.demoDataActive") {
+        didSet { UserDefaults.standard.set(demoDataActive, forKey: "yoko.demoDataActive") }
+    }
+
+    /// Populates the app with realistic demo data showing ~16 days of usage.
     /// Intended for App Store screenshots only — revert before shipping.
     func applyDemoData() {
+        demoDataActive = true
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let startDate = calendar.date(byAdding: .day, value: -16, to: today)!
@@ -601,8 +611,9 @@ final class AppStore {
         profile.startDate = startDate
         profile.lastLessonDate = today
 
-        // ── Weekly minutes (Mon–Sun) ─────────────────────────────
-        weeklyMinutes = [25, 30, 20, 35, 0, 15, 22]
+        // ── Weekly minutes (Mon–Sun, only up to today: Friday) ──
+        // Mon  Tue  Wed  Thu  Fri  Sat  Sun
+        weeklyMinutes = [25,  30,  20,  35,  22,   0,   0]
 
         // ── Locks — enable YouTube & Roblox with earned time ────
         if let ytIdx = locks.firstIndex(where: { $0.name == "YouTube" }) {

@@ -135,9 +135,8 @@ struct HomeView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle().fill(DS.Color.accentSoft).frame(width: 42, height: 42)
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 19, weight: .bold))
-                        .foregroundStyle(DS.Color.accent)
+                    Text("🔥")
+                        .font(.system(size: 20))
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Weekly Streak")
@@ -166,9 +165,8 @@ struct HomeView: View {
                                     Circle().stroke(day.active ? Color.clear : DS.Color.border, lineWidth: 1.5)
                                 )
                             if day.active {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 12, weight: .heavy))
-                                    .foregroundStyle(.white)
+                                Text("🔥")
+                                    .font(.system(size: 13))
                             }
                         }
                         .overlay {

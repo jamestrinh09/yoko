@@ -18,6 +18,7 @@ import ManagedSettings
 import DeviceActivity
 
 struct AppUsageCard: View {
+    @Environment(AppStore.self) private var store
     @Environment(ScreenTimeService.self) private var screenTime
 
     /// Timeframe options for the segmented control.
@@ -62,7 +63,7 @@ struct AppUsageCard: View {
         }
     }
 
-    // MARK: Segmented control (warm orange → cream gradient on selection)
+    // MARK: Segmented control (warm orange -> cream gradient on selection)
 
     private var segmentedControl: some View {
         HStack(spacing: 6) {
@@ -109,8 +110,14 @@ struct AppUsageCard: View {
     @ViewBuilder
     private var content: some View {
         if screenTime.isAuthorized {
-            DeviceActivityReport(context, filter: filter)
-                .frame(height: 196)
+            if store.demoDataActive {
+                MockUsageRows(selectedTimeframe: selectedTimeframe)
+            } else {
+                DeviceActivityReport(context, filter: filter)
+                    .frame(height: 196)
+            }
+        } else if store.demoDataActive {
+            MockUsageRows(selectedTimeframe: selectedTimeframe)
         } else {
             unauthorizedPlaceholder
         }
@@ -157,6 +164,96 @@ struct AppUsageCard: View {
                 devices: .init([.iPhone, .iPad]),
                 applications: apps
             )
+        }
+    }
+}
+
+// MARK: - Demo mock usage (App Store screenshots)
+
+/// Only shown when `store.demoDataActive` is true. Renders realistic-looking
+/// screen-time rows so the App Usage card looks populated in screenshots.
+private struct MockUsageRows: View {
+    let selectedTimeframe: AppUsageCard.Timeframe
+
+    /// Ordered by duration, descending.
+    private var entries: [(name: String, duration: String)] {
+        switch selectedTimeframe {
+        case .today:
+            return [
+                ("YouTube", "2h 15m"),
+                ("Roblox",   "1h 30m"),
+                ("TikTok",   "45m"),
+                ("Other",    "30m"),
+            ]
+        case .thisWeek:
+            return [
+                ("YouTube", "12h 30m"),
+                ("Roblox",   "8h 15m"),
+                ("TikTok",   "5h 45m"),
+                ("Other",    "3h 20m"),
+            ]
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ForEach(entries.indices, id: \.self) { i in
+                let entry = entries[i]
+                HStack(spacing: 12) {
+                    leadingIcon(for: entry.name)
+
+                    Text(entry.name)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(DS.Color.textPrimary)
+
+                    Spacer()
+
+                    Text(entry.duration)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(DS.Color.textSecondary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            DS.Color.brandGradientStart.opacity(0.08),
+                            DS.Color.brandGradientEnd.opacity(0.06),
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(.rect(cornerRadius: 12))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func leadingIcon(for name: String) -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 9)
+                .fill(appColor(name).opacity(0.18))
+                .frame(width: 34, height: 34)
+
+            if name == "Other" {
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(DS.Color.textSecondary)
+            } else {
+                Text(String(name.prefix(1)))
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(appColor(name))
+            }
+        }
+    }
+
+    private func appColor(_ name: String) -> Color {
+        switch name {
+        case "YouTube": return .red
+        case "Roblox":  return .blue
+        case "TikTok":  return DS.Color.textPrimary
+        default:        return DS.Color.accent
         }
     }
 }
