@@ -31,8 +31,9 @@ struct LessonPlayerView: View {
     @State private var lessonResult: LessonResult?
     @State private var lessonRewards: [MilestoneReward] = []
     @State private var showStreak: Bool = false
-    /// True only when the just-finished lesson was the first one completed today,
-    /// so the streak celebration is shown once per day rather than every lesson.
+    /// Whether the streak celebration follows the lesson-complete card. We show
+    /// it after every completed lesson so the full completion celebration is
+    /// consistent, not just on the first lesson of the day.
     @State private var streakEligible: Bool = false
     @State private var unscramble = UnscrambleState()
     @State private var hint = QuestionHintState()
@@ -473,8 +474,9 @@ struct LessonPlayerView: View {
             let outcome = store.completeLesson(lesson, correctCount: correctCount)
             lessonResult = outcome.result
             lessonRewards = outcome.rewards
-            // Only the first completed lesson of the day earns the streak page.
-            streakEligible = store.profile.lessonsCompletedToday == 1
+            // Every completed lesson shows the streak celebration after the
+            // summary card, so the celebration isn't limited to the first lesson.
+            streakEligible = true
             withAnimation(.spring(duration: 0.5)) { showSummary = true }
             if account.isLinked {
                 let snapshot = store.exportSnapshot()

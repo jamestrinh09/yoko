@@ -1079,10 +1079,35 @@ enum CurriculumGenerator {
                   choices: choices, correct: correct, grade: .grade1)
     }
 
+    /// Short sentences for K–Grade 2. Kept large and varied so the cross-lesson
+    /// de-dup (which keys on the full sentence) almost never has to repeat one.
+    private static let simpleSentences: [String] = [
+        "The dog runs.", "I see a cat.", "We go home.", "She read a book.",
+        "The sun is hot.", "A bird can fly.", "He has a ball.", "My mom is kind.",
+        "The fish can swim.", "We like to play.", "The cat is soft.", "I love my dad.",
+        "The frog can jump.", "She rode a bike.", "We see the moon.", "The bus is big.",
+        "A cow says moo.", "He ate the cake.", "The tree is tall.", "I can count ten.",
+        "The duck is wet.", "We made a fort.", "My pen is red.", "The bee can buzz.",
+        "She sang a song.", "The ant is small.", "We ran very fast.", "He found a rock.",
+        "The pig is pink.", "I drew a star."
+    ]
+
+    /// Longer Grade 3 sentences with an adjective or adverb for richer ordering.
+    private static let grade3Sentences: [String] = [
+        "The big dog ran quickly.", "A small cat sat softly.", "The bright sun shines warmly.",
+        "The happy boy jumped high.", "A tiny bird sang sweetly.", "The cold wind blew hard.",
+        "The brave girl climbed slowly.", "A green frog leaped far.", "The old truck moved loudly.",
+        "The kind teacher smiled gently.", "A fast train rushed past.", "The red apple fell down.",
+        "The wet dog shook hard.", "A bright star glowed softly.", "The young deer ran away.",
+        "The tall tree swayed gently.", "A loud bell rang twice.", "The new shoes felt great.",
+        "The hungry cat meowed loudly.", "A warm fire crackled softly.", "The clever fox hid quietly.",
+        "The little duck swam slowly.", "A heavy rain poured down.", "The proud lion roared loudly.",
+        "The sleepy baby yawned softly.", "A shiny coin rolled away.", "The strong horse galloped fast.",
+        "The gentle breeze felt cool.", "A bright kite flew high.", "The busy bee worked hard."
+    ]
+
     private static func genSentence(band: GradeBand, rng: inout SeededRNG) -> NormalizedQuestion {
-        let templates: [String] = band == .grade3
-            ? ["The big dog ran quickly.", "A small cat sat softly.", "The bright sun shines warmly."]
-            : ["The dog runs.", "I see a cat.", "We go home.", "She read a book."]
+        let templates: [String] = band == .grade3 ? grade3Sentences : simpleSentences
         let sentence = templates.randomElement(using: &rng) ?? "The dog runs."
         let stripped = sentence.replacingOccurrences(of: ".", with: "")
         let tokens = stripped.split(separator: " ").map(String.init).shuffled(using: &rng)

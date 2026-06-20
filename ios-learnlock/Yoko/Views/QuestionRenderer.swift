@@ -977,26 +977,39 @@ struct TenFrameCard: View {
         let isPrefilled = i < filled
         let isAdded = added.contains(i)
         let isFilled = isPrefilled || isAdded
-        return Button {
-            guard !locked, !isPrefilled else { return }
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
-                if isAdded { added.remove(i) } else { added.insert(i) }
+        // Pre-filled dots are fixed, so they render as a plain circle (not a
+        // disabled Button) — a disabled button dims its content, which made the
+        // orange dots look washed out. Only the tappable empty slots are Buttons.
+        return Group {
+            if isPrefilled {
+                dot(isFilled: true, isAdded: false)
+            } else {
+                Button {
+                    guard !locked else { return }
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.5)) {
+                        if isAdded { added.remove(i) } else { added.insert(i) }
+                    }
+                    report(added.isEmpty ? nil : String(added.count))
+                } label: {
+                    dot(isFilled: isFilled, isAdded: isAdded)
+                }
+                .buttonStyle(.plain)
+                .disabled(locked)
             }
-            report(added.isEmpty ? nil : String(added.count))
-        } label: {
-            Circle()
-                .fill(isFilled ? DS.Color.accent : Color.white)
-                .frame(width: 42, height: 42)
-                .overlay(
-                    Circle().stroke(
-                        isFilled ? Color.clear : DS.Color.border,
-                        lineWidth: 2
-                    )
-                )
-                .scaleEffect(isAdded ? 1.08 : 1.0)
         }
-        .buttonStyle(.plain)
-        .disabled(locked || isPrefilled)
+    }
+
+    private func dot(isFilled: Bool, isAdded: Bool) -> some View {
+        Circle()
+            .fill(isFilled ? DS.Color.accent : Color.white)
+            .frame(width: 42, height: 42)
+            .overlay(
+                Circle().stroke(
+                    isFilled ? Color.clear : DS.Color.border,
+                    lineWidth: 2
+                )
+            )
+            .scaleEffect(isAdded ? 1.08 : 1.0)
     }
 }
 
@@ -1947,12 +1960,15 @@ struct MemoryMatchCard: View {
     @State private var busy: Bool = false
     @State private var wiggle: UUID? = nil
 
+    // Always two columns — pairs stack into rows (e.g. 4 pairs => 4 rows × 2
+    // columns) so each card is wide enough to show its full label without
+    // truncating.
     private var columns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: 10), count: min(max(cards.count / 2, 2), 4))
+        Array(repeating: GridItem(.flexible(), spacing: 12), count: 2)
     }
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
+        LazyVGrid(columns: columns, spacing: 12) {
             ForEach(cards) { card in
                 cardView(card)
             }
@@ -1989,13 +2005,19 @@ struct MemoryMatchCard: View {
                     Text(card.label)
                         .font(.system(size: 30, weight: .heavy, design: .rounded))
                         .foregroundStyle(DS.Color.textPrimary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(nil)
+                        .minimumScaleFactor(0.6)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
                 } else {
                     Image(systemName: "questionmark")
-                        .font(.system(size: 24, weight: .heavy))
+                        .font(.system(size: 28, weight: .heavy))
                         .foregroundStyle(.white.opacity(0.9))
                 }
             }
-            .frame(height: 70)
+            .frame(minHeight: 92)
             .opacity(isMatched ? 0.55 : 1)
             .scaleEffect(wiggle == card.id ? 1.08 : 1.0)
             .rotation3DEffect(.degrees(isUp ? 0 : 180), axis: (x: 0, y: 1, z: 0))
