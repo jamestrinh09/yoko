@@ -158,7 +158,6 @@ final class AppStore {
         self.profile.currentGrade = CurriculumGenerator.gradeBand(for: 1)
         self.profile.startDate = Date()
         self.parentPasscode = Keychain.get("yoko.parentPasscode")
-        if demoDataActive { applyDemoData() }
     }
 
     // MARK: - Children
@@ -576,15 +575,13 @@ final class AppStore {
     // MARK: - Demo data (App Store screenshots)
 
     /// Populates the app with realistic demo data showing ~16 days of usage.
-    /// When true, demo data re-applies every launch. Set by the hidden dev tools
-    /// button in Settings; cleared manually by undoing the prompt or deleting the
-    /// key. Intended for App Store screenshots only — revert before shipping.
-    var demoDataActive: Bool = UserDefaults.standard.bool(forKey: "yoko.demoDataActive") {
-        didSet { UserDefaults.standard.set(demoDataActive, forKey: "yoko.demoDataActive") }
-    }
+    /// In-memory flag toggled when demo data is loaded this session. Never
+    /// persisted — a relaunch clears it so testers/users never see demo data.
+    /// Activated only via the hidden 10-tap dev tools button in Settings.
+    var demoDataActive: Bool = false
 
     /// Populates the app with realistic demo data showing ~16 days of usage.
-    /// Intended for App Store screenshots only — revert before shipping.
+    /// Session-only; intended for App Store screenshots. Cleared on relaunch.
     func applyDemoData() {
         demoDataActive = true
         let calendar = Calendar.current

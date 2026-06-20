@@ -86,8 +86,7 @@ struct QuestionRenderer: View {
 
     private var questionTitle: String {
         let raw = normalized?.prompt ?? question.prompt
-        // Vocabulary prompts read better without a trailing period.
-        return template == "vocabulary_matching" ? raw.strippedTrailingPeriod : raw
+        return raw.strippedTrailingPeriod
     }
 
     /// True when the answer choices are single emoji glyphs (picture vocab).
