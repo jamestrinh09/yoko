@@ -10,6 +10,8 @@
 
 import SwiftUI
 import RevenueCat
+import UserNotifications
+import UIKit
 
 /// Which plan is highlighted on the Step 3 selector.
 private enum PaywallPlan { case annual, monthly }
@@ -37,6 +39,7 @@ struct PaywallFlowView: View {
     @State private var slideForward: Bool = true
     @State private var selectedPlan: PaywallPlan = .annual
     @State private var showLogin: Bool = false
+    @State private var notificationsDenied: Bool = false
 
     var body: some View {
         ZStack {
@@ -51,6 +54,7 @@ struct PaywallFlowView: View {
         .preferredColorScheme(.light)
         .tint(DS.Color.accent)
         .task { if !store.hasPackages { await store.loadOfferings() } }
+        .onChange(of: currentStep) { _, newValue in if newValue == 1 { checkNotificationsOnReminderStep() } }
         .alert(
             "Hmm, that didn't work",
             isPresented: Binding(
@@ -139,7 +143,7 @@ struct PaywallFlowView: View {
                 PaywallTrialIntroStep(childName: displayName, onContinue: advance)
                     .transition(slide)
             case 1:
-                PaywallReminderStep(onContinue: advance)
+                PaywallReminderStep(onContinue: advance, notificationsDenied: notificationsDenied)
                     .transition(slide)
             default:
                 PaywallPlanStep(
@@ -166,6 +170,28 @@ struct PaywallFlowView: View {
     private var displayName: String {
         let trimmed = childName.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "your child" : trimmed
+    }
+
+    /// Re-checks notification status when the reminder step appears. If never
+    /// asked, requests it (legitimate native prompt). If already denied, surfaces
+    /// a Settings deep-link nudge instead, since the OS won't re-prompt.
+    private func checkNotificationsOnReminderStep() {
+        Task {
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            switch settings.authorizationStatus {
+            case .notDetermined:
+                let granted = (try? await UNUserNotificationCenter.current()
+                    .requestAuthorization(options: [.alert, .badge, .sound])) ?? false
+                appStore.notificationsEnabled = granted
+                notificationsDenied = !granted
+            case .denied:
+                appStore.notificationsEnabled = false
+                notificationsDenied = true
+            default:
+                appStore.notificationsEnabled = true
+                notificationsDenied = false
+            }
+        }
     }
 
     private func advance() {
@@ -382,6 +408,7 @@ private struct PaywallTrialIntroStep: View {
 
 private struct PaywallReminderStep: View {
     let onContinue: () -> Void
+    var notificationsDenied: Bool = false
     @State private var swing = false
 
     var body: some View {
@@ -402,6 +429,26 @@ private struct PaywallReminderStep: View {
                         .frame(height: 330)
                         .rotationEffect(.degrees(swing ? 3 : -3), anchor: .top)
                         .shadow(color: .black.opacity(0.08), radius: 16, y: 10)
+
+                    if notificationsDenied {
+                        Button {
+                            if let url = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "bell.slash.fill")
+                                Text("Notifications are off — tap to enable in Settings")
+                            }
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(DS.Color.textSecondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .background(DS.Color.surface, in: Capsule())
+                            .overlay(Capsule().stroke(DS.Color.border, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 .padding(.horizontal, 28)
             }

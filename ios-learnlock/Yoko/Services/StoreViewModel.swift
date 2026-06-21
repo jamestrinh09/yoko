@@ -10,6 +10,7 @@
 import Foundation
 import Observation
 import RevenueCat
+import UserNotifications
 
 @Observable
 @MainActor
@@ -111,8 +112,28 @@ final class StoreViewModel {
         do {
             let result = try await Purchases.shared.purchase(package: package)
             if result.userCancelled { return false }
-            isPremium = result.customerInfo.entitlements[Self.entitlementId]?.isActive == true
-            return isPremium
+
+            var active = result.customerInfo.entitlements[Self.entitlementId]?.isActive == true
+            let startedTrial = result.customerInfo.entitlements[Self.entitlementId]?.periodType == .trial
+
+            // Entitlement validation can lag a beat right after a fresh purchase
+            // (especially trial/sandbox purchases) — re-check once before giving up.
+            if !active {
+                if let refreshed = try? await Purchases.shared.customerInfo() {
+                    active = refreshed.entitlements[Self.entitlementId]?.isActive == true
+                }
+            }
+            isPremium = active
+
+            if startedTrial {
+                scheduleTrialReminder()
+            }
+
+            // A clean (non-cancelled, non-error) purchase result means the
+            // transaction succeeded with Apple — treat it as success so onboarding
+            // isn't blocked by entitlement-flag lag. `isPremium` will self-correct
+            // moments later via the customerInfoStream listener if needed.
+            return true
         } catch ErrorCode.purchaseCancelledError {
             return false
         } catch ErrorCode.paymentPendingError {
@@ -120,6 +141,26 @@ final class StoreViewModel {
         } catch {
             errorMessage = "Something went wrong. Please try again."
             return false
+        }
+    }
+
+    /// Schedules a local reminder 5 days after a free trial starts, so the
+    /// 7-day annual trial timeline ("In 5 days – Reminder") shown on the paywall
+    /// is backed by an actual notification, firing 2 days before the charge.
+    private func scheduleTrialReminder() {
+        let center = UNUserNotificationCenter.current()
+        center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+            guard granted else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "Your free trial ends in 2 days"
+            content.body = "Open Yoko to manage your subscription before you're charged."
+            content.sound = .default
+            let request = UNNotificationRequest(
+                identifier: "trial_reminder",
+                content: content,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 5 * 24 * 60 * 60, repeats: false)
+            )
+            center.add(request)
         }
     }
 
