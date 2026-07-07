@@ -5,6 +5,7 @@
 
 import SwiftUI
 
+@MainActor
 enum SeedData {
     /// Build the initial subject queues procedurally for the given grade.
     static func subjects(grade: Int = 1) -> [SubjectProgress] {

@@ -5,6 +5,33 @@
 
 import SwiftUI
 import RevenueCat
+import UserNotifications
+
+// MARK: - Notification Delegate
+
+final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+    var onLessonRedirect: (() -> Void)?
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let id = response.notification.request.identifier
+        if id == "yoko.unlock" || id == "yoko.timeup" {
+            onLessonRedirect?()
+        }
+        completionHandler()
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
+    }
+}
 
 @main
 struct YokoApp: App {
@@ -13,6 +40,8 @@ struct YokoApp: App {
     @State private var account = ParentAccountService()
     @State private var storeVM = StoreViewModel()
     @Environment(\.scenePhase) private var scenePhase
+
+    private let notificationDelegate = NotificationDelegate()
 
     init() {
         // Configure RevenueCat once, before any Purchases.shared access. DEBUG/
@@ -24,6 +53,7 @@ struct YokoApp: App {
         Purchases.configure(withAPIKey: Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY)
         #endif
         MediaPreloader.preloadAll()
+        UNUserNotificationCenter.current().delegate = notificationDelegate
     }
 
     var body: some Scene {
@@ -42,6 +72,9 @@ struct YokoApp: App {
             .preferredColorScheme(.light)
             .tint(DS.Color.accent)
             .task {
+                notificationDelegate.onLessonRedirect = { [store] in
+                    store.pendingLessonRedirect = true
+                }
                 if account.isLinked, let remote = await account.pull() {
                     store.applySnapshot(remote)
                 }

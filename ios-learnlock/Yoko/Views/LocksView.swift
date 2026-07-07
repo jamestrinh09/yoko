@@ -437,29 +437,119 @@ struct LocksView: View {
 
     private var lockList: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                SectionHeader(title: "Apps")
-                Spacer()
-                Button(selectionMode ? "Done" : "Select") {
-                    withAnimation(.spring(duration: 0.3)) {
-                        selectionMode.toggle()
-                        if !selectionMode { selectedAppIds.removeAll() }
+            SectionHeader(title: "Locked Apps")
+
+            if screenTime.selectedItemCount > 0 {
+                // Show current unlock rule and allow changing it
+                VStack(spacing: 16) {
+                    HStack(spacing: 14) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(DS.Color.accent)
+                            .frame(width: 44, height: 44)
+                            .background(DS.Color.accentSoft)
+                            .clipShape(.rect(cornerRadius: 12))
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(screenTime.selectedItemCount) app\(screenTime.selectedItemCount == 1 ? "" : "s") locked")
+                                .font(.dsHeadline)
+                                .foregroundStyle(DS.Color.textPrimary)
+                            Text("Complete lessons to unlock")
+                                .font(.dsCaption)
+                                .foregroundStyle(DS.Color.textSecondary)
+                        }
+
+                        Spacer()
+
+                        Toggle("", isOn: Binding(
+                            get: { screenTime.selectedItemCount > 0 },
+                            set: { enabled in
+                                requireParentPasscode {
+                                    if enabled {
+                                        screenTime.applyShields()
+                                    } else {
+                                        screenTime.clearShields()
+                                    }
+                                }
+                            }
+                        ))
+                        .labelsHidden()
+                        .tint(DS.Color.accent)
+                    }
+
+                    Divider()
+
+                    // Unlock rule selector
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Unlock Rule")
+                            .font(.dsCaption)
+                            .foregroundStyle(DS.Color.textSecondary)
+
+                        HStack(spacing: 8) {
+                            unlockRuleChip("session", label: "Per Session", icon: "clock.fill")
+                            unlockRuleChip("time", label: "Timed", icon: "timer")
+                            unlockRuleChip("daily", label: "Daily", icon: "calendar")
+                        }
                     }
                 }
-                .font(.dsHeadline)
-                .foregroundStyle(DS.Color.accent)
-            }
-            ForEach(filtered) { lock in
-                LockRow(
-                    lock: lock,
-                    selectionMode: selectionMode,
-                    isSelected: selectedAppIds.contains(lock.id),
-                    onEditRule: { presentSingleRule(for: lock) },
-                    onToggleEnabled: { requireParentPasscode { store.toggleLock(lock) } },
-                    onToggleSelect: { toggleSelect(lock) }
+                .padding(16)
+                .background(DS.Color.surface)
+                .clipShape(.rect(cornerRadius: DS.Radius.large))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.large)
+                        .stroke(DS.Color.border, lineWidth: 1)
+                )
+            } else {
+                // No apps selected yet
+                VStack(spacing: 12) {
+                    Image(systemName: "apps.iphone")
+                        .font(.system(size: 32, weight: .light))
+                        .foregroundStyle(DS.Color.textTertiary)
+                    Text("No apps locked yet")
+                        .font(.dsHeadline)
+                        .foregroundStyle(DS.Color.textSecondary)
+                    Text("Tap \"Choose apps to lock\" above to select apps")
+                        .font(.dsCaption)
+                        .foregroundStyle(DS.Color.textTertiary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
+                .background(DS.Color.surface)
+                .clipShape(.rect(cornerRadius: DS.Radius.large))
+                .overlay(
+                    RoundedRectangle(cornerRadius: DS.Radius.large)
+                        .stroke(DS.Color.border, lineWidth: 1)
                 )
             }
         }
+    }
+
+    private func unlockRuleChip(_ rule: String, label: String, icon: String) -> some View {
+        let isSelected = store.unlockRule == rule
+        return Button {
+            requireParentPasscode {
+                store.unlockRule = rule
+                store.setLockRuleForAll(type: .reward, rewardRule: rule)
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(label)
+                    .font(.dsCaption)
+            }
+            .foregroundStyle(isSelected ? .white : DS.Color.textPrimary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(isSelected ? DS.Color.accent : DS.Color.background)
+            .clipShape(.capsule)
+            .overlay(
+                Capsule()
+                    .stroke(isSelected ? Color.clear : DS.Color.border, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func toggleSelect(_ lock: AppLock) {

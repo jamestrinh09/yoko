@@ -30,6 +30,7 @@ enum AppTab: Hashable, CaseIterable {
 }
 
 struct RootTabView: View {
+    @Environment(AppStore.self) private var store
     @State private var selection: AppTab = .home
     @State private var hideDock: Bool = false
 
@@ -59,6 +60,12 @@ struct RootTabView: View {
         }
         .animation(.spring(duration: 0.4), value: selection)
         .animation(.spring(duration: 0.35), value: hideDock)
+        .onChange(of: store.pendingLessonRedirect) { _, pending in
+            if pending {
+                selection = .learn
+                store.pendingLessonRedirect = false
+            }
+        }
     }
 }
 

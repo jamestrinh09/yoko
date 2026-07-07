@@ -6,7 +6,11 @@
 import SwiftUI
 import Observation
 import UserNotifications
+import DeviceActivity
+import ManagedSettings
+import FamilyControls
 
+@MainActor
 @Observable
 final class AppStore {
     var profile: ChildProfile
@@ -74,6 +78,9 @@ final class AppStore {
     var hasShownSyncPrompt: Bool = UserDefaults.standard.bool(forKey: "yoko.hasShownSyncPrompt") {
         didSet { UserDefaults.standard.set(hasShownSyncPrompt, forKey: "yoko.hasShownSyncPrompt") }
     }
+
+    /// Set true when a notification tap should redirect to the Learn tab.
+    var pendingLessonRedirect: Bool = false
 
     /// Stable identifier for this physical install, used to coordinate which
     /// device is the designated "child's device" across a linked household. The
@@ -363,11 +370,64 @@ final class AppStore {
         }
     }
 
-    func unlockApp(_ lock: AppLock, minutes: Int) {
+    func unlockApp(_ lock: AppLock, minutes: Int, screenTime: ScreenTimeService) {
         guard let idx = locks.firstIndex(where: { $0.id == lock.id }) else { return }
+
+        // Calculate unlock duration based on reward rule
+        let duration: Int
+        switch lock.rewardRule {
+        case "time":
+            duration = minutes
+        case "daily":
+            let calendar = Calendar.current
+            let now = Date()
+            let midnight = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now)!)
+            duration = max(1, Int(midnight.timeIntervalSince(now) / 60))
+        default: // "session"
+            duration = 20
+        }
+
+        // Save current app tokens to SharedState for re-shielding later
+        let tokens = screenTime.selection.applicationTokens
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: tokens, requiringSecureCoding: true) {
+            SharedState.selectedAppTokensData = data
+        }
+
+        // Update shared state
+        SharedState.isUnlocked = true
+        let expiryDate = Date.now + TimeInterval(duration * 60)
+        SharedState.unlockExpiryDate = expiryDate
+
+        // Start DeviceActivity monitoring schedule
+        let calendar = Calendar.current
+        let now = Date()
+        let startComponents = calendar.dateComponents([.hour, .minute, .second], from: now)
+        let endComponents = calendar.dateComponents([.hour, .minute, .second], from: expiryDate)
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: startComponents,
+            intervalEnd: endComponents,
+            repeats: false
+        )
+
+        do {
+            try DeviceActivityCenter().startMonitoring(
+                DeviceActivityName("com.yoko.unlock"),
+                during: schedule
+            )
+        } catch {
+            print("Failed to start DeviceActivity monitoring: \(error)")
+        }
+
+        // Update local data model
         let used = min(minutes, locks[idx].earnedMinutesAvailable, profile.earnedScreenTimeMinutes)
         locks[idx].earnedMinutesAvailable -= used
         profile.earnedScreenTimeMinutes -= used
+    }
+
+    func stopUnlock() {
+        DeviceActivityCenter().stopMonitoring([DeviceActivityName("com.yoko.unlock")])
+        SharedState.isUnlocked = false
     }
 
     func resetOnboarding() {
