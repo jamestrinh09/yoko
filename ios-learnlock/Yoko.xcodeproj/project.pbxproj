@@ -3,12 +3,20 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		XX298127CFBB2CF3FA631BXX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */; };
 		7A99EE0142C0FFEE00DA000B /* AppUsageReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E9225F1A2FFCBC63000F8A23 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9225F192FFCBC62000F8A23 /* DeviceActivity.framework */; };
+		E9225F222FFCBC63000F8A23 /* DeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9225F172FFCBC62000F8A23 /* DeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E9225F2E2FFCBC93000F8A23 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9225F2D2FFCBC93000F8A23 /* ManagedSettings.framework */; };
+		E9225F302FFCBC93000F8A23 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9225F2F2FFCBC93000F8A23 /* ManagedSettingsUI.framework */; };
+		E9225F382FFCBC93000F8A23 /* ShieldConfigurationExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9225F2C2FFCBC93000F8A23 /* ShieldConfigurationExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E9225F422FFCBCBC000F8A23 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9225F2D2FFCBC93000F8A23 /* ManagedSettings.framework */; };
+		E9225F4A2FFCBCBC000F8A23 /* ShieldActionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9225F412FFCBCBC000F8A23 /* ShieldActionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		SHARED0002000000000001 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9225F2D2FFCBC93000F8A23 /* ManagedSettings.framework */; };
+		XX298127CFBB2CF3FA631BXX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXDCC169DE7B2F3C1C8B10XX /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -26,12 +34,26 @@
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
 			remoteInfo = Yoko;
 		};
-		7A99EE0142C0FFEE00DA000D /* PBXContainerItemProxy */ = {
+		E9225F202FFCBC63000F8A23 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 7A99EE0142C0FFEE00DA0001;
-			remoteInfo = AppUsageReportExtension;
+			remoteGlobalIDString = E9225F162FFCBC62000F8A23;
+			remoteInfo = DeviceActivityMonitorExtension;
+		};
+		E9225F362FFCBC93000F8A23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9225F2B2FFCBC93000F8A23;
+			remoteInfo = ShieldConfigurationExtension;
+		};
+		E9225F482FFCBCBC000F8A23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9225F402FFCBCBC000F8A23;
+			remoteInfo = ShieldActionExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -47,6 +69,19 @@
 			name = "Embed ExtensionKit Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E9225F232FFCBC63000F8A23 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E9225F382FFCBC93000F8A23 /* ShieldConfigurationExtension.appex in Embed Foundation Extensions */,
+				E9225F222FFCBC63000F8A23 /* DeviceActivityMonitorExtension.appex in Embed Foundation Extensions */,
+				E9225F4A2FFCBCBC000F8A23 /* ShieldActionExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -54,7 +89,55 @@
 		105FC5892E9EAD3200EA8BCF /* YokoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YokoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5932E9EAD3200EA8BCF /* YokoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YokoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = AppUsageReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9225F172FFCBC62000F8A23 /* DeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9225F192FFCBC62000F8A23 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		E9225F2C2FFCBC93000F8A23 /* ShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E9225F2D2FFCBC93000F8A23 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		E9225F2F2FFCBC93000F8A23 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		E9225F412FFCBCBC000F8A23 /* ShieldActionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldActionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		7A99EE0142C0FFEE00DA000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */;
+		};
+		E9225F262FFCBC63000F8A23 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E9225F162FFCBC62000F8A23 /* DeviceActivityMonitorExtension */;
+		};
+		E9225F392FFCBC93000F8A23 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E9225F2B2FFCBC93000F8A23 /* ShieldConfigurationExtension */;
+		};
+		E9225F4B2FFCBCBC000F8A23 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E9225F402FFCBCBC000F8A23 /* ShieldActionExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		105FC57C2E9EAD3100EA8BCF /* Yoko */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Yoko; sourceTree = "<group>"; };
+		105FC58C2E9EAD3200EA8BCF /* YokoTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = YokoTests; sourceTree = "<group>"; };
+		105FC5962E9EAD3200EA8BCF /* YokoUITests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = YokoUITests; sourceTree = "<group>"; };
+		7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (7A99EE0142C0FFEE00DA000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = AppUsageReportExtension; sourceTree = "<group>"; };
+		E9225F1B2FFCBC63000F8A23 /* DeviceActivityMonitorExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (E9225F262FFCBC63000F8A23 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = DeviceActivityMonitorExtension; sourceTree = "<group>"; };
+		E9225F312FFCBC93000F8A23 /* ShieldConfigurationExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (E9225F392FFCBC93000F8A23 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ShieldConfigurationExtension; sourceTree = "<group>"; };
+		E9225F432FFCBCBC000F8A23 /* ShieldActionExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (E9225F4B2FFCBCBC000F8A23 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = ShieldActionExtension; sourceTree = "<group>"; };
+		SHARED0001000000000000 /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		105FC5772E9EAD3100EA8BCF /* Frameworks */ = {
@@ -86,52 +169,47 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E9225F142FFCBC62000F8A23 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9225F1A2FFCBC63000F8A23 /* DeviceActivity.framework in Frameworks */,
+				SHARED0002000000000001 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9225F292FFCBC93000F8A23 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9225F2E2FFCBC93000F8A23 /* ManagedSettings.framework in Frameworks */,
+				E9225F302FFCBC93000F8A23 /* ManagedSettingsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9225F3E2FFCBCBC000F8A23 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9225F422FFCBCBC000F8A23 /* ManagedSettings.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7A99EE0142C0FFEE00DA000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		105FC57C2E9EAD3100EA8BCF /* Yoko */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Yoko;
-			sourceTree = "<group>";
-		};
-		105FC58C2E9EAD3200EA8BCF /* YokoTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = YokoTests;
-			sourceTree = "<group>";
-		};
-		105FC5962E9EAD3200EA8BCF /* YokoUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = YokoUITests;
-			sourceTree = "<group>";
-		};
-		7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				7A99EE0142C0FFEE00DA000E /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			path = AppUsageReportExtension;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXGroup section */
 		105FC5712E9EAD3100EA8BCF = {
 			isa = PBXGroup;
 			children = (
 				105FC57C2E9EAD3100EA8BCF /* Yoko */,
+				SHARED0001000000000000 /* Shared */,
 				7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */,
 				105FC58C2E9EAD3200EA8BCF /* YokoTests */,
 				105FC5962E9EAD3200EA8BCF /* YokoUITests */,
+				E9225F1B2FFCBC63000F8A23 /* DeviceActivityMonitorExtension */,
+				E9225F312FFCBC93000F8A23 /* ShieldConfigurationExtension */,
+				E9225F432FFCBCBC000F8A23 /* ShieldActionExtension */,
+				E9225F182FFCBC62000F8A23 /* Frameworks */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -143,8 +221,21 @@
 				105FC5892E9EAD3200EA8BCF /* YokoTests.xctest */,
 				105FC5932E9EAD3200EA8BCF /* YokoUITests.xctest */,
 				7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */,
+				E9225F172FFCBC62000F8A23 /* DeviceActivityMonitorExtension.appex */,
+				E9225F2C2FFCBC93000F8A23 /* ShieldConfigurationExtension.appex */,
+				E9225F412FFCBCBC000F8A23 /* ShieldActionExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		E9225F182FFCBC62000F8A23 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E9225F192FFCBC62000F8A23 /* DeviceActivity.framework */,
+				E9225F2D2FFCBC93000F8A23 /* ManagedSettings.framework */,
+				E9225F2F2FFCBC93000F8A23 /* ManagedSettingsUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -158,14 +249,18 @@
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
 				105FC5782E9EAD3100EA8BCF /* Resources */,
 				7A99EE0142C0FFEE00DA000A /* Embed ExtensionKit Extensions */,
+				E9225F232FFCBC63000F8A23 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				7A99EE0142C0FFEE00DA000C /* PBXTargetDependency */,
+				E9225F212FFCBC63000F8A23 /* PBXTargetDependency */,
+				E9225F372FFCBC93000F8A23 /* PBXTargetDependency */,
+				E9225F492FFCBCBC000F8A23 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				105FC57C2E9EAD3100EA8BCF /* Yoko */,
+				SHARED0001000000000000 /* Shared */,
 			);
 			name = Yoko;
 			packageProductDependencies = (
@@ -174,28 +269,6 @@
 			productName = Yoko;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* Yoko.app */;
 			productType = "com.apple.product-type.application";
-		};
-		7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7A99EE0142C0FFEE00DA0007 /* Build configuration list for PBXNativeTarget "AppUsageReportExtension" */;
-			buildPhases = (
-				7A99EE0142C0FFEE00DA0004 /* Sources */,
-				7A99EE0142C0FFEE00DA0005 /* Frameworks */,
-				7A99EE0142C0FFEE00DA0006 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */,
-			);
-			name = AppUsageReportExtension;
-			packageProductDependencies = (
-			);
-			productName = AppUsageReportExtension;
-			productReference = 7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */;
-			productType = "com.apple.product-type.extensionkit-extension";
 		};
 		105FC5882E9EAD3200EA8BCF /* YokoTests */ = {
 			isa = PBXNativeTarget;
@@ -243,6 +316,95 @@
 			productReference = 105FC5932E9EAD3200EA8BCF /* YokoUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7A99EE0142C0FFEE00DA0007 /* Build configuration list for PBXNativeTarget "AppUsageReportExtension" */;
+			buildPhases = (
+				7A99EE0142C0FFEE00DA0004 /* Sources */,
+				7A99EE0142C0FFEE00DA0005 /* Frameworks */,
+				7A99EE0142C0FFEE00DA0006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				7A99EE0142C0FFEE00DA0003 /* AppUsageReportExtension */,
+			);
+			name = AppUsageReportExtension;
+			packageProductDependencies = (
+			);
+			productName = AppUsageReportExtension;
+			productReference = 7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
+		E9225F162FFCBC62000F8A23 /* DeviceActivityMonitorExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9225F272FFCBC63000F8A23 /* Build configuration list for PBXNativeTarget "DeviceActivityMonitorExtension" */;
+			buildPhases = (
+				E9225F132FFCBC62000F8A23 /* Sources */,
+				E9225F142FFCBC62000F8A23 /* Frameworks */,
+				E9225F152FFCBC62000F8A23 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E9225F1B2FFCBC63000F8A23 /* DeviceActivityMonitorExtension */,
+				SHARED0001000000000000 /* Shared */,
+			);
+			name = DeviceActivityMonitorExtension;
+			packageProductDependencies = (
+			);
+			productName = DeviceActivityMonitorExtension;
+			productReference = E9225F172FFCBC62000F8A23 /* DeviceActivityMonitorExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E9225F2B2FFCBC93000F8A23 /* ShieldConfigurationExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9225F3A2FFCBC93000F8A23 /* Build configuration list for PBXNativeTarget "ShieldConfigurationExtension" */;
+			buildPhases = (
+				E9225F282FFCBC93000F8A23 /* Sources */,
+				E9225F292FFCBC93000F8A23 /* Frameworks */,
+				E9225F2A2FFCBC93000F8A23 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E9225F312FFCBC93000F8A23 /* ShieldConfigurationExtension */,
+			);
+			name = ShieldConfigurationExtension;
+			packageProductDependencies = (
+			);
+			productName = ShieldConfigurationExtension;
+			productReference = E9225F2C2FFCBC93000F8A23 /* ShieldConfigurationExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E9225F402FFCBCBC000F8A23 /* ShieldActionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9225F4C2FFCBCBC000F8A23 /* Build configuration list for PBXNativeTarget "ShieldActionExtension" */;
+			buildPhases = (
+				E9225F3D2FFCBCBC000F8A23 /* Sources */,
+				E9225F3E2FFCBCBC000F8A23 /* Frameworks */,
+				E9225F3F2FFCBCBC000F8A23 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E9225F432FFCBCBC000F8A23 /* ShieldActionExtension */,
+			);
+			name = ShieldActionExtension;
+			packageProductDependencies = (
+			);
+			productName = ShieldActionExtension;
+			productReference = E9225F412FFCBCBC000F8A23 /* ShieldActionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -250,13 +412,10 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2600;
+				LastSwiftUpdateCheck = 1640;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					105FC5792E9EAD3100EA8BCF = {
-						CreatedOnToolsVersion = 26.0;
-					};
-					7A99EE0142C0FFEE00DA0001 = {
 						CreatedOnToolsVersion = 26.0;
 					};
 					105FC5882E9EAD3200EA8BCF = {
@@ -266,6 +425,18 @@
 					105FC5922E9EAD3200EA8BCF = {
 						CreatedOnToolsVersion = 26.0;
 						TestTargetID = 105FC5792E9EAD3100EA8BCF;
+					};
+					7A99EE0142C0FFEE00DA0001 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					E9225F162FFCBC62000F8A23 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					E9225F2B2FFCBC93000F8A23 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					E9225F402FFCBCBC000F8A23 = {
+						CreatedOnToolsVersion = 16.4;
 					};
 				};
 			};
@@ -279,7 +450,9 @@
 			);
 			mainGroup = 105FC5712E9EAD3100EA8BCF;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
+			packageReferences = (
+				XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			productRefGroup = 105FC57B2E9EAD3100EA8BCF /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -288,9 +461,9 @@
 				7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */,
 				105FC5882E9EAD3200EA8BCF /* YokoTests */,
 				105FC5922E9EAD3200EA8BCF /* YokoUITests */,
-			);
-			packageReferences = (
-				XX4AC81916604C4344ADC0XX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				E9225F162FFCBC62000F8A23 /* DeviceActivityMonitorExtension */,
+				E9225F2B2FFCBC93000F8A23 /* ShieldConfigurationExtension */,
+				E9225F402FFCBCBC000F8A23 /* ShieldActionExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -318,6 +491,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		7A99EE0142C0FFEE00DA0006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9225F152FFCBC62000F8A23 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9225F2A2FFCBC93000F8A23 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9225F3F2FFCBCBC000F8A23 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -355,6 +549,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E9225F132FFCBC62000F8A23 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9225F282FFCBC93000F8A23 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9225F3D2FFCBCBC000F8A23 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -367,6 +582,21 @@
 			isa = PBXTargetDependency;
 			target = 105FC5792E9EAD3100EA8BCF /* Yoko */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
+		};
+		E9225F212FFCBC63000F8A23 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9225F162FFCBC62000F8A23 /* DeviceActivityMonitorExtension */;
+			targetProxy = E9225F202FFCBC63000F8A23 /* PBXContainerItemProxy */;
+		};
+		E9225F372FFCBC93000F8A23 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9225F2B2FFCBC93000F8A23 /* ShieldConfigurationExtension */;
+			targetProxy = E9225F362FFCBC93000F8A23 /* PBXContainerItemProxy */;
+		};
+		E9225F492FFCBCBC000F8A23 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9225F402FFCBCBC000F8A23 /* ShieldActionExtension */;
+			targetProxy = E9225F482FFCBCBC000F8A23 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -500,7 +730,7 @@
 				CODE_SIGN_ENTITLEMENTS = Yoko/Yoko.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = N256P2XWG5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -534,7 +764,7 @@
 				CODE_SIGN_ENTITLEMENTS = Yoko/Yoko.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = N256P2XWG5;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -704,6 +934,168 @@
 			};
 			name = Release;
 		};
+		E9225F242FFCBC63000F8A23 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N256P2XWG5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DeviceActivityMonitorExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DeviceActivityMonitorExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.DeviceActivityMonitorExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E9225F252FFCBC63000F8A23 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = DeviceActivityMonitorExtension/DeviceActivityMonitorExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N256P2XWG5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = DeviceActivityMonitorExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = DeviceActivityMonitorExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.DeviceActivityMonitorExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E9225F3B2FFCBC93000F8A23 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N256P2XWG5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.ShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E9225F3C2FFCBC93000F8A23 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldConfigurationExtension/ShieldConfigurationExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N256P2XWG5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldConfigurationExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldConfigurationExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.ShieldConfigurationExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E9225F4D2FFCBCBC000F8A23 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldActionExtension/ShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N256P2XWG5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.ShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E9225F4E2FFCBCBC000F8A23 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShieldActionExtension/ShieldActionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = N256P2XWG5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShieldActionExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ShieldActionExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.rork.yoko.ShieldActionExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -748,6 +1140,33 @@
 			buildConfigurations = (
 				7A99EE0142C0FFEE00DA0008 /* Debug */,
 				7A99EE0142C0FFEE00DA0009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9225F272FFCBC63000F8A23 /* Build configuration list for PBXNativeTarget "DeviceActivityMonitorExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9225F242FFCBC63000F8A23 /* Debug */,
+				E9225F252FFCBC63000F8A23 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9225F3A2FFCBC93000F8A23 /* Build configuration list for PBXNativeTarget "ShieldConfigurationExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9225F3B2FFCBC93000F8A23 /* Debug */,
+				E9225F3C2FFCBC93000F8A23 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9225F4C2FFCBCBC000F8A23 /* Build configuration list for PBXNativeTarget "ShieldActionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9225F4D2FFCBCBC000F8A23 /* Debug */,
+				E9225F4E2FFCBCBC000F8A23 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
