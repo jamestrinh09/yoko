@@ -1397,8 +1397,19 @@ struct DemoQuestionScreen: View {
                         contentArea
                     }
 
-                    // Progress bar floats over the hero without affecting layout.
-                    topBar
+                    // Parent Demo tag + progress bar float over the hero
+                    VStack(spacing: 6) {
+                        Text("👋 Parent Demo")
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .foregroundStyle(DS.Color.accent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                            .background(DS.Color.accent.opacity(0.15))
+                            .clipShape(.capsule)
+                            .padding(.top, 8)
+
+                        topBar
+                    }
                 }
                 .opacity(isReady ? 1 : 0)
                 .overlay(alignment: .topTrailing) {
@@ -1693,7 +1704,10 @@ struct DemoQuestionScreen: View {
     }
 
     private var bottomButton: some View {
-        let canContinue = feedback == .correct
+        let template = normalized.templateType.snakeKey
+        let isUnscrambleComplete = template == "unscramble_word" &&
+            (unscramble.picked.filter { $0 >= 0 }.count >= unscramble.correctCount)
+        let canContinue = feedback == .correct || isUnscrambleComplete
         return Button(action: {
             if canContinue { onContinue() }
         }) {

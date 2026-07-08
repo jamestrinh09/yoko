@@ -1329,21 +1329,28 @@ final class UnscrambleState {
 struct UnscrambleBackButton: View {
     @Bindable var state: UnscrambleState
 
+    private var hasFilledSlots: Bool {
+        state.picked.contains { $0 >= 0 }
+    }
+
     var body: some View {
         Button {
-            guard !state.isLocked, !state.picked.isEmpty else { return }
-            withAnimation(.spring(duration: 0.2)) { state.picked.removeLast() }
+            guard !state.isLocked, hasFilledSlots else { return }
+            // Find the last filled slot and clear it
+            if let lastFilledIndex = state.picked.lastIndex(where: { $0 >= 0 }) {
+                withAnimation(.spring(duration: 0.2)) { state.picked[lastFilledIndex] = -1 }
+            }
         } label: {
             Image(systemName: "delete.left.fill")
                 .font(.system(size: 18, weight: .heavy))
-                .foregroundStyle(state.picked.isEmpty ? DS.Color.textTertiary.opacity(0.4) : DS.Color.accent)
+                .foregroundStyle(hasFilledSlots ? DS.Color.accent : DS.Color.textTertiary.opacity(0.4))
                 .frame(width: 46, height: 46)
                 .background(Color(red: 0.996, green: 0.994, blue: 0.992))
                 .clipShape(.capsule)
-                .shadow(color: DS.Color.accent.opacity(state.picked.isEmpty ? 0.08 : 0.28), radius: 8, y: 2)
+                .shadow(color: DS.Color.accent.opacity(hasFilledSlots ? 0.28 : 0.08), radius: 8, y: 2)
         }
         .buttonStyle(.plain)
-        .disabled(state.picked.isEmpty || state.isLocked)
+        .disabled(!hasFilledSlots || state.isLocked)
     }
 }
 
@@ -1423,23 +1430,23 @@ struct UnscrambleCard: View {
             state.active = true
             state.letters = letters
             state.correctCount = correctLetters.count
-            state.picked = []
+            state.picked = Array(repeating: -1, count: correctLetters.count)
             state.isLocked = isLocked
         }
         .onDisappear { state.active = false }
         .onChange(of: isLocked) { _, newValue in state.isLocked = newValue }
         .onChange(of: state.picked) { _, _ in
-            let joined = state.picked.map { letters[$0] }.joined()
+            let joined = state.picked.filter { $0 >= 0 }.map { letters[$0] }.joined()
             selectedAnswer = joined.isEmpty ? nil : joined
         }
     }
 
     private func slotView(at i: Int) -> some View {
-        let hasLetter = i < state.picked.count
+        let hasLetter = i < state.picked.count && state.picked[i] >= 0
         let letter = hasLetter ? letters[state.picked[i]] : nil
         return Button {
             guard !isLocked, hasLetter else { return }
-            withAnimation(.spring(duration: 0.2)) { state.picked.remove(at: i) }
+            withAnimation(.spring(duration: 0.2)) { state.picked[i] = -1 }
         } label: {
             // Letter sits on top of a simple underline — no card, no orange border.
             VStack(spacing: 6) {
@@ -1478,8 +1485,18 @@ struct UnscrambleCard: View {
         }()
 
         return Button {
-            guard !isLocked, !isUsed, state.picked.count < correctLetters.count else { return }
-            withAnimation(.spring(duration: 0.2)) { state.picked.append(idx) }
+            guard !isLocked else { return }
+            // If this chip is already used, find which slot it's in and clear that slot
+            if isUsed {
+                if let slotIndex = state.picked.firstIndex(of: idx) {
+                    withAnimation(.spring(duration: 0.2)) { state.picked[slotIndex] = -1 }
+                }
+                return
+            }
+            // Find the first empty slot (-1) and fill it
+            if let emptySlot = state.picked.firstIndex(of: -1) {
+                withAnimation(.spring(duration: 0.2)) { state.picked[emptySlot] = idx }
+            }
         } label: {
             ZStack(alignment: .topTrailing) {
                 Text(letter)
@@ -1511,7 +1528,6 @@ struct UnscrambleCard: View {
             }
         }
         .buttonStyle(.plain)
-        .disabled(isUsed || isLocked)
     }
 }
 
