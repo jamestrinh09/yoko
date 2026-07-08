@@ -52,7 +52,6 @@ struct OnboardingView: View {
                     .iPadScaled { DS.Color.background }
             } else if isDemoQuestionStep {
                 demoQuestionScreen
-                    .iPadScaled { Color.white }
             } else {
                 standardScreen
                     .iPadScaled { stepBackground }
@@ -134,7 +133,7 @@ struct OnboardingView: View {
 
                 ScrollView(showsIndicators: false) {
                     currentStepContent
-                        .frame(maxWidth: 520)
+                        .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? .infinity : 520)
                         .frame(maxWidth: .infinity)
                         .padding(.horizontal, 24)
                         .padding(.top, 16)
@@ -146,7 +145,7 @@ struct OnboardingView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 footerView
-                    .frame(maxWidth: 520)
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? .infinity : 520)
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 24)
                     .padding(.top, 8)
@@ -1534,15 +1533,18 @@ struct DemoQuestionScreen: View {
     private var splitBackground: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                Image("HeroBackground")
-                    .resizable()
-                    .scaledToFill()
-                    .scaleEffect(1.05)
-                    .offset(y: -72)
-                    .clipped()
-                    .onAppear {
-                        withAnimation(.easeIn(duration: 0.25)) { bgLoaded = true }
-                    }
+                GeometryReader { geo in
+                    Image("HeroBackground")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .scaleEffect(1.05)
+                        .offset(y: -72)
+                        .clipped()
+                        .onAppear {
+                            withAnimation(.easeIn(duration: 0.25)) { bgLoaded = true }
+                        }
+                }
 
                 LinearGradient(
                     colors: [.clear, .white.opacity(0.95)],
@@ -1559,7 +1561,9 @@ struct DemoQuestionScreen: View {
     }
 
     private var contentArea: some View {
-        VStack(spacing: 0) {
+        let isIPad = UIDevice.current.userInterfaceIdiom == .pad
+        let hPad: CGFloat = isIPad ? 40 : 20
+        return VStack(spacing: 0) {
             ScrollView(.vertical, showsIndicators: false) {
                 QuestionRenderer(
                     question: question,
@@ -1568,14 +1572,14 @@ struct DemoQuestionScreen: View {
                     unscramble: unscramble,
                     hint: hint
                 )
-                .padding(.horizontal, 20)
+                .padding(.horizontal, hPad)
                 .padding(.top, 20)
                 .padding(.bottom, 8)
                 .opacity(contentOpacity)
             }
 
             keyProgressRow
-                .padding(.horizontal, 20)
+                .padding(.horizontal, hPad)
                 .padding(.bottom, 16)
                 .padding(.top, 8)
 
@@ -1583,7 +1587,7 @@ struct DemoQuestionScreen: View {
                 .background(DS.Color.border)
 
             bottomButton
-                .padding(.horizontal, 24)
+                .padding(.horizontal, isIPad ? 44 : 24)
                 .padding(.vertical, 18)
         }
         .background(Color.white)
@@ -2399,14 +2403,17 @@ struct CommitmentScreen: View {
                                 .frame(maxWidth: .infinity)
                                 .padding(.top, 2)
 
-                            Text("Commit to putting \(possessive) education first")
-                                .font(.system(size: 28, weight: .heavy, design: .rounded))
-                                .foregroundStyle(DS.Color.textPrimary)
-                                .multilineTextAlignment(.center)
-                                .lineSpacing(3)
+                            VStack(spacing: 18) {
+                                Text("Commit to putting \(possessive) education first")
+                                    .font(.system(size: 28, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(DS.Color.textPrimary)
+                                    .multilineTextAlignment(.center)
+                                    .lineSpacing(3)
 
-                            signatureCard
-                                .padding(.top, 10)
+                                signatureCard
+                                    .padding(.top, 10)
+                            }
+                            .offset(y: -6)
 
                             if hasSignature {
                                 VStack(spacing: 8) {
@@ -2430,6 +2437,7 @@ struct CommitmentScreen: View {
                                         )
                                 }
                                 .padding(.top, 20)
+                                .offset(y: -10)
                                 .transition(.opacity.combined(with: .move(edge: .bottom)))
                             }
                         }

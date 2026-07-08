@@ -77,7 +77,6 @@ struct LessonPlayerView: View {
                 }
             }
         }
-        .iPadScaled { Color.white }
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .navigationBarBackButtonHidden(true)
         .onChange(of: contentHeight) { _, _ in evaluateScrollHint() }
@@ -95,12 +94,15 @@ struct LessonPlayerView: View {
     private var splitBackground: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                Image("HeroBackground")
-                    .resizable()
-                    .scaledToFill()
-                    .scaleEffect(1.05)
-                    .offset(y: -72)
-                    .clipped()
+                GeometryReader { geo in
+                    Image("HeroBackground")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .scaleEffect(1.05)
+                        .offset(y: -72)
+                        .clipped()
+                }
 
                 LinearGradient(
                     colors: [.clear, .white.opacity(0.95)],
@@ -156,7 +158,9 @@ struct LessonPlayerView: View {
     }
 
     private var contentArea: some View {
-        VStack(spacing: 0) {
+        let isIPad = UIDevice.current.userInterfaceIdiom == .pad
+        let hPad: CGFloat = isIPad ? 40 : 20
+        return VStack(spacing: 0) {
             // Scrollable question content so overflow never pushes the footer
             ScrollView(.vertical, showsIndicators: true) {
                 QuestionRenderer(
@@ -166,7 +170,7 @@ struct LessonPlayerView: View {
                     unscramble: unscramble,
                     hint: hint
                 )
-                .padding(.horizontal, 20)
+                .padding(.horizontal, hPad)
                 .padding(.top, 20)
                 .padding(.bottom, 8)
                 .background(
@@ -192,7 +196,7 @@ struct LessonPlayerView: View {
             // Key progress centered above CTA — pinned, with the unscramble
             // back/hint buttons docked in the bottom corners when active.
             keyProgressRow
-                .padding(.horizontal, 20)
+                .padding(.horizontal, hPad)
                 .padding(.bottom, 16)
                 .padding(.top, 8)
 
