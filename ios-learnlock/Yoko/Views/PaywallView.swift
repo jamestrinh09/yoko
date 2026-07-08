@@ -749,6 +749,10 @@ private struct PaywallBottomBar: View {
     let isLoading: Bool
     let onTap: () -> Void
 
+    private var bottomPad: CGFloat {
+        UIDevice.current.userInterfaceIdiom == .pad ? 18 : 20
+    }
+
     var body: some View {
         VStack(spacing: 14) {
             HStack(spacing: 7) {
@@ -763,7 +767,7 @@ private struct PaywallBottomBar: View {
         }
         .padding(.horizontal, 24)
         .padding(.top, 10)
-        .padding(.bottom, 20)
+        .padding(.bottom, bottomPad)
     }
 }
 

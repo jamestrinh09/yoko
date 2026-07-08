@@ -8,6 +8,7 @@ struct QuestionRenderer: View {
     var hint: QuestionHintState = QuestionHintState()
 
     @State private var builtTokens: [String] = []
+    @State private var showScrollHint: Bool = false
 
     private var normalized: NormalizedQuestion? { question.normalized }
     private var content: [String: String] { normalized?.questionContent ?? [:] }
@@ -60,9 +61,24 @@ struct QuestionRenderer: View {
 
             // Answer options area (when separate from interactive content)
             if showsSeparateChoiceArea {
-                answerOptionsArea
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
+                ZStack(alignment: .bottomTrailing) {
+                    answerOptionsArea
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
+
+                    if showScrollHint {
+                        Text("scroll ↓")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(DS.Color.textSecondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(DS.Color.surface.opacity(0.9))
+                            .clipShape(.capsule)
+                            .padding(.trailing, 24)
+                            .padding(.bottom, 20)
+                            .transition(.opacity)
+                    }
+                }
             }
         }
         .scaleEffect(feedback == .correct ? 1.01 : 1)
@@ -74,12 +90,21 @@ struct QuestionRenderer: View {
         .onChange(of: questionKey) { _, _ in
             builtTokens = []
             selectedAnswer = nil
+            showScrollHint = false
             configureHint()
         }
         .onChange(of: feedback) { _, _ in
             hint.isLocked = isLocked
         }
-        .onAppear { configureHint() }
+        .onAppear {
+            configureHint()
+            if choices.count > 3 {
+                withAnimation(.easeIn(duration: 0.3)) { showScrollHint = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation(.easeOut(duration: 0.3)) { showScrollHint = false }
+                }
+            }
+        }
     }
 
     // MARK: - Question Meta
@@ -772,7 +797,7 @@ struct FlowRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, minHeight: height)
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 5)
                         .background(
                             selected == item
                                 ? Color(red: 0.996, green: 0.994, blue: 0.992)
@@ -811,9 +836,10 @@ struct FlowRow: View {
     }
     private var height: CGFloat {
         switch style {
-        case .letter: 78
+        case .letter: 70
         case .emoji: 110
-        default: 66
+        case .word: 56
+        default: 56
         }
     }
     private var font: Font {

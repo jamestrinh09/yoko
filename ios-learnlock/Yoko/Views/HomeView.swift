@@ -23,11 +23,7 @@ struct HomeView: View {
                 greeting
                 weeklyStreakCard
                 quickStatsRow
-                if showsLiveUsage {
-                    AppUsageCard()
-                } else {
-                    parentDeviceUsageNote
-                }
+                AppUsageCard()
                 activeLocksSection
                 rewardsPreview
                 Spacer(minLength: 100)

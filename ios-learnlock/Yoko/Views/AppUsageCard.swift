@@ -63,7 +63,7 @@ struct AppUsageCard: View {
         }
     }
 
-    // MARK: Segmented control (warm orange -> cream gradient on selection)
+    // MARK: Segmented control
 
     private var segmentedControl: some View {
         HStack(spacing: 6) {
@@ -78,27 +78,16 @@ struct AppUsageCard: View {
                     Text(tf.rawValue)
                         .font(.system(size: 14, weight: .semibold, design: .rounded))
                         .foregroundStyle(selected ? .white : DS.Color.textSecondary)
-                        .shadow(color: selected ? .black.opacity(0.18) : .clear, radius: 1, y: 1)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
-                        .background {
-                            if selected {
-                                LinearGradient(
-                                    colors: [DS.Color.brandGradientStart, DS.Color.brandGradientEnd],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            } else {
-                                Color.clear
-                            }
-                        }
+                        .background(selected ? DS.Color.accent : DS.Color.surface)
                         .clipShape(.capsule)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(4)
-        .background(DS.Color.background)
+        .background(DS.Color.surface)
         .clipShape(.capsule)
         .overlay(
             Capsule().stroke(DS.Color.border, lineWidth: 1)
@@ -175,30 +164,35 @@ struct AppUsageCard: View {
 private struct MockUsageRows: View {
     let selectedTimeframe: AppUsageCard.Timeframe
 
-    /// Ordered by duration, descending.
-    private var entries: [(name: String, duration: String)] {
+    /// Ordered by duration, descending. Minutes value used for fill calculation.
+    private var entries: [(name: String, duration: String, minutes: Int)] {
         switch selectedTimeframe {
         case .today:
             return [
-                ("YouTube", "2h 15m"),
-                ("Roblox",   "1h 30m"),
-                ("TikTok",   "45m"),
-                ("Other",    "30m"),
+                ("YouTube", "2h 15m", 135),
+                ("Roblox",   "1h 30m", 90),
+                ("TikTok",   "45m", 45),
+                ("Other",    "30m", 30),
             ]
         case .thisWeek:
             return [
-                ("YouTube", "12h 30m"),
-                ("Roblox",   "8h 15m"),
-                ("TikTok",   "5h 45m"),
-                ("Other",    "3h 20m"),
+                ("YouTube", "12h 30m", 750),
+                ("Roblox",   "8h 15m", 495),
+                ("TikTok",   "5h 45m", 345),
+                ("Other",    "3h 20m", 200),
             ]
         }
+    }
+
+    private var maxMinutes: Int {
+        entries.map(\.minutes).max() ?? 1
     }
 
     var body: some View {
         VStack(spacing: 10) {
             ForEach(entries.indices, id: \.self) { i in
                 let entry = entries[i]
+                let fillPercent = Double(entry.minutes) / Double(maxMinutes)
                 HStack(spacing: 12) {
                     leadingIcon(for: entry.name)
 
@@ -214,15 +208,20 @@ private struct MockUsageRows: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
+                .padding(.top, i == 0 ? 12 : 0)
                 .background(
-                    LinearGradient(
-                        colors: [
-                            DS.Color.brandGradientStart.opacity(0.08),
-                            DS.Color.brandGradientEnd.opacity(0.06),
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                    GeometryReader { geo in
+                        LinearGradient(
+                            colors: [
+                                DS.Color.accent.opacity(0.85),
+                                DS.Color.accent.opacity(0.25),
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(width: geo.size.width * fillPercent)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 )
                 .clipShape(.rect(cornerRadius: 12))
             }
