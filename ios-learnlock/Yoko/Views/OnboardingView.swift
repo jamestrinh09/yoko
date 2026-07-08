@@ -32,6 +32,7 @@ struct OnboardingView: View {
     @State private var q1: String? = nil
     @State private var q2: String? = nil
     @State private var q3: String? = nil
+    @State private var gifLoaded1 = false
     @State private var imageLoaded2 = false
     @State private var imageLoaded3 = false
     @State private var imageLoaded11 = false
@@ -59,6 +60,7 @@ struct OnboardingView: View {
         }
         .animation(.spring(duration: 0.4), value: step)
         .onChange(of: step) {
+            gifLoaded1 = false
             imageLoaded2 = false
             imageLoaded3 = false
             imageLoaded11 = false
@@ -104,7 +106,7 @@ struct OnboardingView: View {
     }
 
     private var isDemoQuestionStep: Bool {
-        step == 14 || step == 15 || step == 16
+        step == 15 || step == 16 || step == 17
     }
 
     // MARK: - Commitment Screen
@@ -193,7 +195,7 @@ struct OnboardingView: View {
 
     private var stepBackground: some View {
         Group {
-            if step == 1 || step == 17 || step == 20 {
+            if step == 1 || step == 18 || step == 20 {
                 LinearGradient(
                     colors: step == 20
                         ? [Color(red: 1.0, green: 0.69, blue: 0.0), DS.Color.accent, Color(red: 1.0, green: 0.54, blue: 0.12), DS.Color.accent]
@@ -208,7 +210,7 @@ struct OnboardingView: View {
     }
 
     private var isGradientStep: Bool {
-        step == 1 || step == 17 || step == 20
+        step == 1 || step == 18 || step == 20
     }
 
     // MARK: - Step Content
@@ -227,13 +229,13 @@ struct OnboardingView: View {
         case 9: Step9()
         case 10: Step10()
         case 11: Step11()
-        case 12: Step12()
-        case 13: Step13()
-        case 14: Step14()
-        case 15: Step15()
-        case 16: Step16()
-        case 17: Step17()
-        case 18: Step18()
+        case 12: Step18()
+        case 13: Step12()
+        case 14: Step13()
+        case 15: Step14()
+        case 16: Step15()
+        case 17: Step16()
+        case 18: Step17()
         case 19: Step19()
         case 20: Step20()
         case 21: Step21()
@@ -283,12 +285,12 @@ struct OnboardingView: View {
             PrimaryButton(label: "Continue", action: nextStep)
         case 11:
             PrimaryButton(label: "Continue", action: nextStep)
-        case 13:
-            PrimaryButton(label: "let's learn 🤩", action: nextStep)
-        case 17:
-            PrimaryButton(label: "Continue", action: nextStep)
-        case 18:
+        case 12:
             PrimaryButton(label: "Use this rule", action: nextStep)
+        case 14:
+            PrimaryButton(label: "let's learn 🤩", action: nextStep)
+        case 18:
+            PrimaryButton(label: "Continue", action: nextStep)
         case 19:
             PrimaryButton(label: "Continue", action: nextStep)
         case 20:
@@ -445,12 +447,25 @@ struct OnboardingView: View {
     // MARK: - Step 1
 
     private func Step1() -> some View {
-        VStack(spacing: 0) {
+        let mascotSize = min(261, UIScreen.main.bounds.width * 0.6)
+        return VStack(spacing: 0) {
             mascotBubble(text: "Hi I'm Yoko")
                 .offset(y: 30)
-            MascotGIF(url: mascotGIF(.happy), size: min(261, UIScreen.main.bounds.width * 0.6))
-                .padding(.top, 20)
-                .offset(y: 20)
+            ZStack {
+                Circle()
+                    .fill(DS.Color.accentSoft)
+                    .frame(width: mascotSize, height: mascotSize)
+                    .opacity(gifLoaded1 ? 0 : 1)
+                    .animation(.easeOut(duration: 0.25), value: gifLoaded1)
+                MascotGIF(url: mascotGIF(.happy), size: mascotSize)
+            }
+            .padding(.top, 20)
+            .offset(y: 20)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    gifLoaded1 = true
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
@@ -849,15 +864,15 @@ struct OnboardingView: View {
     private func demoNormalizedQuestion(for step: Int) -> NormalizedQuestion {
         switch step {
         // Q1 — Kindergarten counting: 12 frogs in 3×4 array — count or multiply.
-        case 14: return CurriculumSystem.sampleMathQuestions[25]
+        case 15: return CurriculumSystem.sampleMathQuestions[25]
 
         // Q2 — Grade 1 Make Ten: ten-frame with 7 filled orange dots.
         //      The most visually distinctive math component — shows parents
         //      this is a real learning tool, not just text questions.
-        case 15: return CurriculumSystem.sampleMathQuestions[6]
+        case 16: return CurriculumSystem.sampleMathQuestions[6]
 
         // Q3 — Grade 2 unscramble "monkey" 🐒: scrambled letter chips into word slots.
-        case 16: return CurriculumSystem.sampleEnglishQuestions[30]
+        case 17: return CurriculumSystem.sampleEnglishQuestions[30]
 
         default: return CurriculumSystem.sampleMathQuestions[20]
         }
@@ -865,9 +880,9 @@ struct OnboardingView: View {
 
     private func demoQuestionSelectionBinding() -> Binding<String?> {
         switch step {
-        case 14: return $q1
-        case 15: return $q2
-        case 16: return $q3
+        case 15: return $q1
+        case 16: return $q2
+        case 17: return $q3
         default: return .constant(nil)
         }
     }
@@ -875,7 +890,7 @@ struct OnboardingView: View {
     @ViewBuilder
     private var demoQuestionScreen: some View {
         let normalized = demoNormalizedQuestion(for: step)
-        let questionNum = step - 13
+        let questionNum = step - 14
         DemoQuestionScreen(
             normalized: normalized,
             questionNum: questionNum,
