@@ -99,6 +99,12 @@ struct SubjectProgress: Identifiable, Hashable {
     var weakSkills: [String] = []
     /// Monotonically increasing counter used to seed the next batch of lessons.
     var generationCursor: UInt64 = 1
+    /// The current curriculum level within this subject (1-based).
+    var currentLevel: Int = 1
+    /// Number of lessons completed at the current level (resets on level-up).
+    var lessonsCompletedThisLevel: Int = 0
+    /// Lifetime lesson count across all levels (never resets).
+    var totalLessonsCompletedAllLevels: Int = 0
 
     var lessonsCompleted: Int { lessons.filter(\.completed).count }
 
@@ -209,6 +215,9 @@ struct ChildProfile: Hashable {
     var startDate: Date = Date()
     /// The day the most recent lesson was completed (drives the daily streak).
     var lastLessonDate: Date? = nil
+    /// Per-grade progress map: grade -> subject progress array. When the child
+    /// switches grades, their progress for that grade is saved/restored from here.
+    var gradeProgressMap: [Int: [SubjectProgress]] = [:]
 
     /// Lifetime correct-answer ratio used for grade-promotion eligibility.
     var overallAccuracy: Double {

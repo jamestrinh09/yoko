@@ -776,12 +776,18 @@ struct FlowRow: View {
         // `stacked` forces one full-width choice per row (used by spelling, where
         // long words need their own line). With exactly two choices, use a fixed
         // 2-column grid so they sit side-by-side in a single clean row.
+        // With exactly 4 choices, use a fixed 2-column grid for a 2x2 layout.
+        // With exactly 3 choices, use a fixed 3-column grid so all fit on one row.
         let columns: [GridItem] = stacked
-            ? [GridItem(.flexible(), spacing: 12)]
-            : (items.count == 2
-                ? [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-                : [GridItem(.adaptive(minimum: minWidth), spacing: 12)])
-        return LazyVGrid(columns: columns, spacing: 12) {
+            ? [GridItem(.flexible(), spacing: 8)]
+            : items.count == 2
+            ? [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+            : items.count == 3
+            ? [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+            : items.count == 4
+            ? [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)]
+            : [GridItem(.adaptive(minimum: minWidth), spacing: 8)]
+        return LazyVGrid(columns: columns, spacing: 8) {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 Button {
                     withAnimation(.spring(duration: 0.2)) {
@@ -796,7 +802,7 @@ struct FlowRow: View {
                         .minimumScaleFactor(0.55)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, minHeight: height)
-                        .padding(.horizontal, 14)
+                        .padding(.horizontal, 8)
                         .padding(.vertical, 5)
                         .background(
                             selected == item

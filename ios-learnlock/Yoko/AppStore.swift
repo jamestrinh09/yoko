@@ -134,6 +134,9 @@ final class AppStore {
     /// A grade promotion awaiting parent approval (drives the promotion banner).
     var pendingPromotion: GradePromotion?
 
+    /// A level-up that just occurred (drives celebration UI).
+    var pendingLevelUp: LevelUpInfo? = nil
+
     /// Children in the household. All children share the same curriculum and
     /// progress; switching the active child only changes the displayed identity.
     var children: [Child]
@@ -234,6 +237,20 @@ final class AppStore {
             subjects[sIdx].xp += xpEarned
             profile.lessonsCompletedToday += alreadyDone ? 0 : 1
             updateMastery(for: lesson, score: score, subjectIndex: sIdx)
+
+            // Track level progress (only count first completion)
+            if !alreadyDone {
+                subjects[sIdx].lessonsCompletedThisLevel += 1
+                subjects[sIdx].totalLessonsCompletedAllLevels += 1
+
+                // Level-up detection: 20 lessons per level
+                if subjects[sIdx].lessonsCompletedThisLevel >= 20 {
+                    subjects[sIdx].currentLevel += 1
+                    subjects[sIdx].lessonsCompletedThisLevel = 0
+                    pendingLevelUp = LevelUpInfo(subject: lesson.subject, newLevel: subjects[sIdx].currentLevel)
+                }
+            }
+
             refillQueueIfNeeded(subjectIndex: sIdx)
         }
 
@@ -262,10 +279,14 @@ final class AppStore {
 
         let mathDone = subject(.math)?.lessonsCompleted ?? 0
         let englishDone = subject(.english)?.lessonsCompleted ?? 0
+        let mathTotalAllLevels = subject(.math)?.totalLessonsCompletedAllLevels ?? 0
+        let englishTotalAllLevels = subject(.english)?.totalLessonsCompletedAllLevels ?? 0
         let rewards = MilestoneEngine.evaluate(
             profile: profile,
             mathLessonsCompleted: mathDone,
-            englishLessonsCompleted: englishDone
+            englishLessonsCompleted: englishDone,
+            mathTotalAllLevels: mathTotalAllLevels,
+            englishTotalAllLevels: englishTotalAllLevels
         )
         applyRewards(rewards)
         return (result, rewards)
@@ -453,24 +474,49 @@ final class AppStore {
 
     // MARK: - Grade level
 
-    /// Update the child's grade. Keeps completed lessons (history) and mastery,
-    /// but regenerates the upcoming lesson queue at the new difficulty.
+    /// Update the child's grade. Saves the current grade's progress to
+    /// `gradeProgressMap` before switching, then restores progress for the new
+    /// grade if it exists, otherwise generates a fresh lesson queue at Level 1.
     func setGrade(_ newGrade: Int) {
+        let oldGrade = profile.grade
+        // Save current progress for the old grade before switching
+        if oldGrade != newGrade {
+            profile.gradeProgressMap[oldGrade] = subjects
+        }
+
         profile.grade = newGrade
         profile.currentGrade = CurriculumGenerator.gradeBand(for: newGrade)
-        for i in subjects.indices {
-            let completed = subjects[i].lessons.filter(\.completed)
-            let weak = subjects[i].weakSkills.compactMap { CurriculumSkill(rawValue: $0) }
-            let seed = subjects[i].generationCursor
-            let fresh = CurriculumGenerator.generateBatch(
-                subject: subjects[i].subject,
-                grade: newGrade,
-                count: queueTargetSize,
-                startSeed: seed &+ 7919,
-                weakSkills: weak
-            )
-            subjects[i].lessons = completed + fresh
-            subjects[i].generationCursor = seed &+ UInt64(queueTargetSize) &+ 7919
+        // Clear pending promotion when grade changes (saved progress is never reset)
+        pendingPromotion = nil
+
+        // Restore saved progress for the new grade, or generate fresh at Level 1
+        if let savedProgress = profile.gradeProgressMap[newGrade] {
+            subjects = savedProgress
+            // Refill queues if needed (child may have been away from this grade)
+            for i in subjects.indices {
+                refillQueueIfNeeded(subjectIndex: i)
+            }
+        } else {
+            // No saved progress — generate fresh lessons at the new grade, starting at Level 1
+            for i in subjects.indices {
+                let completed = subjects[i].lessons.filter(\.completed)
+                let weak = subjects[i].weakSkills.compactMap { CurriculumSkill(rawValue: $0) }
+                let seed = subjects[i].generationCursor
+                // Reset to Level 1 for a new grade
+                subjects[i].currentLevel = 1
+                subjects[i].lessonsCompletedThisLevel = 0
+                let levelSeed = seed &+ UInt64(subjects[i].currentLevel) &* 999_983
+                let fresh = CurriculumGenerator.generateBatch(
+                    subject: subjects[i].subject,
+                    grade: newGrade,
+                    count: queueTargetSize,
+                    startSeed: levelSeed &+ 7919,
+                    currentLevel: subjects[i].currentLevel,
+                    weakSkills: weak
+                )
+                subjects[i].lessons = completed + fresh
+                subjects[i].generationCursor = seed &+ UInt64(queueTargetSize) &+ 7919
+            }
         }
     }
 
@@ -505,16 +551,15 @@ final class AppStore {
 
     private func scheduleParentPromotionNotification(_ promo: GradePromotion) {
         let name = profile.name
-        let gradeName = promo.toGrade.rawValue
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             guard granted else { return }
             let content = UNMutableNotificationContent()
-            content.title = "Grade Promotion Ready 🎓"
-            content.body = "\(name) has completed 40 lessons and is ready for \(gradeName)! Open Yoko to approve."
+            content.title = "🎓 \(name) is ready for the next grade!"
+            content.body = "They completed 60 lessons in every subject. Open Yoko to move them to the next grade."
             content.sound = .default
             let request = UNNotificationRequest(
-                identifier: "grade_promo_\(gradeName)",
+                identifier: "yoko.grade_ready",
                 content: content,
                 trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
             )
@@ -729,15 +774,25 @@ final class AppStore {
         let remaining = subjects[i].lessons.filter { !$0.completed }.count
         guard remaining < queueRefillThreshold else { return }
         let seed = subjects[i].generationCursor
+        let levelSeed = seed &+ UInt64(subjects[i].currentLevel) &* 999_983
         let weak = subjects[i].weakSkills.compactMap { CurriculumSkill(rawValue: $0) }
         let batch = CurriculumGenerator.generateBatch(
             subject: subjects[i].subject,
             grade: profile.grade,
             count: queueTargetSize,
-            startSeed: seed,
+            startSeed: levelSeed,
+            currentLevel: subjects[i].currentLevel,
             weakSkills: weak
         )
         subjects[i].lessons.append(contentsOf: batch)
         subjects[i].generationCursor = seed &+ UInt64(queueTargetSize) &+ 31
     }
+}
+
+// MARK: - Level-up info
+
+struct LevelUpInfo: Identifiable {
+    let subject: Subject
+    let newLevel: Int
+    var id: String { "\(subject.rawValue)-\(newLevel)" }
 }

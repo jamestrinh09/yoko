@@ -695,7 +695,7 @@ nonisolated enum CurriculumSystem {
           "Choose the rhyming word.",
           "word_family_pack",
           ["target":"cat"],
-          ["hat","dog","sun"], "hat", .grade1),
+          ["hat","dog","sun","cup"], "hat", .grade1),
 
         // 8 — Kindergarten: Vocabulary Matching (apple → 🍎)
         q(.english, "vocab_apple", "vocabulary", "Matching Card Set", "Vocabulary Matching",
@@ -711,7 +711,7 @@ nonisolated enum CurriculumSystem {
           "Find the -at word.",
           "word_family_pack",
           ["family":"-at"],
-          ["bat","bed","cup"], "bat", .grade1),
+          ["bat","bed","cup","fox"], "bat", .grade1),
 
         // 10 — Grade 1: Sentence Building (The dog runs)
         q(.english, "sentence_the_dog_runs", "sentence building", "Sentence Strip", "Sentence Building",
@@ -727,7 +727,7 @@ nonisolated enum CurriculumSystem {
           "Tap the word that completes the sentence.",
           "sight_words_pack",
           ["target":"the", "sentence":"I see ___ dog."],
-          ["the","then","them"], "the", .kindergarten),
+          ["the","then","them","that"], "the", .kindergarten),
 
         // 12 — Grade 2: Grammar Sorting (jump → Verb)
         q(.english, "grammar_jump_verb", "grammar sorting", "Grouping Buckets", "Grammar Sorting",
@@ -791,7 +791,7 @@ nonisolated enum CurriculumSystem {
           "Choose the rhyming word.",
           "word_family_pack",
           ["target":"night"],
-          ["light","moon","dark"], "light", .grade2),
+          ["light","moon","dark","star"], "light", .grade2),
 
         // 20 — Grade 3: Sentence Building (longer, with adjective)
         q(.english, "sentence_big_dog_ran", "sentence building", "Sentence Strip", "Sentence Building",
@@ -817,7 +817,7 @@ nonisolated enum CurriculumSystem {
           "Tap the word that completes the sentence.",
           "sight_words_pack",
           ["target":"because", "sentence":"I smiled ___ I was happy."],
-          ["because","before","became"], "because", .grade2),
+          ["because","before","became","behind"], "because", .grade2),
 
         // 23 — Grade 3: Reading Comprehension (two-sentence passage)
         q(.english, "story_mia_library", "reading comprehension", "Story Emoji Strip", "Reading Comprehension",
@@ -865,7 +865,7 @@ nonisolated enum CurriculumSystem {
           "Find the -ig word.",
           "word_family_pack",
           ["family":"-ig"],
-          ["pig","pan","bug"], "pig", .grade1),
+          ["pig","pan","bug","top"], "pig", .grade1),
 
         // 29 — Grade 3: Vocabulary — synonym for happy
         q(.english, "vocab_synonym_happy", "vocabulary", "Choice Card Row", "Vocabulary Matching",
@@ -873,7 +873,7 @@ nonisolated enum CurriculumSystem {
           "Choose the best synonym.",
           "emotion_pack",
           ["word":"happy"],
-          ["joyful","angry","tired"], "joyful", .grade3),
+          ["joyful","angry","tired","sad"], "joyful", .grade3),
 
         // 30 — Grade 2: Unscramble (scrambled letters → monkey, emoji 🐒)
         q(.english, "unscramble_monkey", "unscramble", "Word Builder Tray", "Unscramble Word",
@@ -917,7 +917,7 @@ nonisolated enum CurriculumSystem {
           "Tap the word that completes the sentence.",
           "sight_words_pack",
           ["target":"and", "sentence":"I have a cat ___ a dog."],
-          ["and","can","had"], "and", .kindergarten),
+          ["and","can","had","but"], "and", .kindergarten),
 
         q(.english, "vocab_dog_picture", "vocabulary", "Matching Card Set", "Vocabulary Matching",
           "Match dog to its picture.",
@@ -939,14 +939,14 @@ nonisolated enum CurriculumSystem {
           "Choose the rhyming word.",
           "word_family_pack",
           ["target":"dog"],
-          ["log","sun","cat"], "log", .grade1),
+          ["log","sun","cat","pen"], "log", .grade1),
 
         q(.english, "word_family_op", "word families", "Pattern Row", "Word Families",
           "Which word belongs with top and hop?",
           "Find the -op word.",
           "word_family_pack",
           ["family":"-op"],
-          ["mop","bug","pen"], "mop", .grade1),
+          ["mop","bug","pen","bed"], "mop", .grade1),
 
         q(.english, "sentence_i_see_you", "sentence building", "Sentence Strip", "Sentence Building",
           "Put the words in order to make a sentence.",
@@ -996,14 +996,14 @@ nonisolated enum CurriculumSystem {
           "Choose the rhyming word.",
           "word_family_pack",
           ["target":"cake"],
-          ["lake","fish","book"], "lake", .grade2),
+          ["lake","fish","book","hand"], "lake", .grade2),
 
         q(.english, "sight_their", "sight words", "Choice Card Row", "Sight Word Recognition",
           "The kids found ___ shoes.",
           "Tap the word that completes the sentence.",
           "sight_words_pack",
           ["target":"their", "sentence":"The kids found ___ shoes."],
-          ["their","there","three"], "their", .grade2),
+          ["their","there","three","these"], "their", .grade2),
 
         // ----- Expanded Grade 3 -----
         q(.english, "sentence_quick_fox", "sentence building", "Sentence Strip", "Sentence Building",
@@ -1018,14 +1018,14 @@ nonisolated enum CurriculumSystem {
           "Choose the best synonym.",
           "emotion_pack",
           ["word":"big"],
-          ["huge","small","tiny"], "huge", .grade3),
+          ["huge","small","tiny","short"], "huge", .grade3),
 
         q(.english, "vocab_synonym_fast", "vocabulary", "Choice Card Row", "Vocabulary Matching",
           "Which word means the same as fast?",
           "Choose the best synonym.",
           "emotion_pack",
           ["word":"fast"],
-          ["quick","slow","still"], "quick", .grade3),
+          ["quick","slow","still","heavy"], "quick", .grade3),
 
         q(.english, "grammar_freedom_noun", "grammar sorting", "Grouping Buckets", "Grammar Sorting",
           "Is freedom a noun or a verb?",

@@ -63,7 +63,7 @@ nonisolated enum MilestoneEngine {
 
     // MARK: - Evaluation
 
-    static func evaluate(profile: ChildProfile, mathLessonsCompleted: Int, englishLessonsCompleted: Int) -> [MilestoneReward] {
+    static func evaluate(profile: ChildProfile, mathLessonsCompleted: Int, englishLessonsCompleted: Int, mathTotalAllLevels: Int = 0, englishTotalAllLevels: Int = 0) -> [MilestoneReward] {
         var rewards: [MilestoneReward] = []
         let owned = Set(profile.achievements.map(\.title))
 
@@ -121,16 +121,16 @@ nonisolated enum MilestoneEngine {
         if profile.lifetimeXP >= 1000 { award(scholar) }
         if profile.lifetimeXP >= 5000 { award(bigBrain) }
 
-        // Grade promotion eligibility — all conditions simultaneously true.
-        if profile.totalLessonsCompleted >= 40,
-           profile.overallAccuracy >= 0.80,
-           profile.daysSinceStart >= 14,
+        // Grade promotion eligibility — both math AND english must have 60+ total
+        // lessons completed across all levels.
+        if mathTotalAllLevels >= 60,
+           englishTotalAllLevels >= 60,
            !profile.pendingGradePromotion,
            let nextGrade = profile.currentGrade.next {
             rewards.append(.gradePromotionReady(
                 GradePromotion(fromGrade: profile.currentGrade,
                                toGrade: nextGrade,
-                               lessonsCompleted: profile.totalLessonsCompleted)
+                               lessonsCompleted: mathTotalAllLevels + englishTotalAllLevels)
             ))
         }
 

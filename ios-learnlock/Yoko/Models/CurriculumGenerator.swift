@@ -164,6 +164,8 @@ enum CurriculumGenerator {
         return "wt|\(q.skill)|\(word.lowercased())"
     }
 
+    // Keys are sorted alphabetically to ensure deterministic signatures
+    // regardless of Swift dictionary iteration order.
     private static func signature(_ q: NormalizedQuestion) -> String {
         let contentSig = q.questionContent
             .sorted { $0.key < $1.key }
@@ -222,12 +224,14 @@ enum CurriculumGenerator {
         return Lesson(title: title, subject: subject, level: level, questions: questions)
     }
 
-    static func generateBatch(subject: Subject, grade: Int, count: Int, startSeed: UInt64, weakSkills: [CurriculumSkill] = []) -> [Lesson] {
+    static func generateBatch(subject: Subject, grade: Int, count: Int, startSeed: UInt64, currentLevel: Int = 1, weakSkills: [CurriculumSkill] = []) -> [Lesson] {
         let band = gradeBand(for: grade)
         let pool = skills(subject: subject, grade: band)
         guard !pool.isEmpty else { return [] }
         var lessons: [Lesson] = []
-        var rng = SeededRNG(startSeed)
+        // Incorporate currentLevel into the seed so each level generates different content
+        let levelSeed = startSeed &+ UInt64(currentLevel) &* 999_983
+        var rng = SeededRNG(levelSeed)
         // Shared across the batch so no question is reused until the pool cycles.
         var usedSignatures = Set<String>()
         for i in 0..<count {
@@ -239,7 +243,7 @@ enum CurriculumGenerator {
                 focus = pool.randomElement(using: &rng) ?? pool[0]
             }
             let level = 1 + Int(rng.next() % 4)
-            let seed = startSeed &+ UInt64(i + 1) &* 1_000_003
+            let seed = levelSeed &+ UInt64(i + 1) &* 1_000_003
             lessons.append(generateLesson(subject: subject, grade: grade, focus: focus, level: level, seed: seed, usedSignatures: &usedSignatures))
         }
         return lessons
@@ -764,26 +768,40 @@ enum CurriculumGenerator {
         ("rainbow", "🌈"), ("pumpkin", "🎃"), ("island", "🏝️"), ("planet", "🪐"),
         ("parrot", "🦜"), ("donkey", "🫏"), ("flute", "🪈"), ("cactus", "🌵")
     ]
-    private static let sightWordsK = ["the", "and", "is", "you", "to", "see", "we", "go"]
-    private static let sightWords1 = ["was", "are", "have", "they", "with", "from", "this", "that"]
-    private static let sightWords2 = ["because", "people", "their", "would", "could", "should", "about", "around"]
-    private static let sightWords3 = ["thought", "through", "different", "another", "important", "together"]
+    private static let sightWordsK = ["the", "and", "is", "you", "to", "see", "we", "go", "my", "he", "she", "it", "in", "on", "at", "up", "do", "so"]
+    private static let sightWords1 = ["was", "are", "have", "they", "with", "from", "this", "that", "when", "then", "than", "each", "just", "your", "will", "been"]
+    private static let sightWords2 = ["because", "people", "their", "would", "could", "should", "about", "around", "always", "during", "every", "found", "great", "laugh", "only", "right"]
+    private static let sightWords3 = ["thought", "through", "different", "another", "important", "together", "believe", "century", "complete", "continue", "enough", "produce", "special", "straight"]
     /// Look-alike distractor sets so the challenge is visual discrimination, not
     /// matching identical text. Each entry: target -> two similar-looking words.
     private static let sightWordConfusables: [String: [String]] = [
         "the": ["they", "then"], "and": ["end", "any"], "is": ["if", "it"],
         "you": ["your", "our"], "to": ["too", "toy"], "see": ["sea", "sees"],
         "we": ["me", "wet"], "go": ["got", "do"],
+        "my": ["by", "may"], "he": ["be", "me"], "she": ["the", "see"],
+        "it": ["is", "if"], "in": ["on", "an"], "on": ["no", "one"],
+        "at": ["an", "as"], "up": ["us", "cup"], "do": ["to", "so"], "so": ["go", "no"],
         "was": ["saw", "has"], "are": ["ore", "arm"], "have": ["gave", "hare"],
         "they": ["then", "them"], "with": ["wish", "width"], "from": ["form", "farm"],
         "this": ["thin", "that"], "that": ["than", "chat"],
+        "when": ["then", "went"], "then": ["them", "when"], "than": ["that", "then"],
+        "each": ["reach", "beach"], "just": ["must", "dust"], "your": ["four", "pour"],
+        "will": ["well", "fill"], "been": ["bean", "seen"],
         "because": ["became", "before"], "people": ["purple", "pebble"],
         "their": ["there", "these"], "would": ["could", "wound"],
         "could": ["cloud", "would"], "should": ["shout", "shoulder"],
         "about": ["above", "abort"], "around": ["aground", "round"],
+        "always": ["already", "almost"], "during": ["during", "daring"],
+        "every": ["very", "ever"], "found": ["sound", "round"],
+        "great": ["treat", "greet"], "laugh": ["cough", "rough"],
+        "only": ["lonely", "once"], "right": ["night", "light"],
         "thought": ["through", "though"], "through": ["thorough", "thought"],
         "different": ["difficult", "deferent"], "another": ["anther", "mother"],
-        "important": ["imported", "impatient"], "together": ["tighter", "toughened"]
+        "important": ["imported", "impatient"], "together": ["tighter", "toughened"],
+        "believe": ["believe", "receive"], "century": ["center", "sentry"],
+        "complete": ["compete", "complex"], "continue": ["contain", "contend"],
+        "enough": ["enrich", "though"], "produce": ["product", "proceed"],
+        "special": ["spatial", "species"], "straight": ["strange", "strength"]
     ]
     private static let rhymePairs: [(String, [String])] = [
         ("cat", ["hat", "bat", "mat"]),
@@ -791,13 +809,43 @@ enum CurriculumGenerator {
         ("night", ["light", "sight", "fight"]),
         ("ring", ["king", "sing", "wing"]),
         ("bell", ["tell", "fell", "well"]),
-        ("car", ["star", "far", "jar"])
+        ("car", ["star", "far", "jar"]),
+        ("sun", ["run", "fun", "bun"]),
+        ("cake", ["lake", "make", "take"]),
+        ("tree", ["bee", "free", "see"]),
+        ("fish", ["dish", "wish", "swish"]),
+        ("jump", ["bump", "dump", "pump"]),
+        ("rain", ["train", "brain", "plain"]),
+        ("shoe", ["blue", "clue", "glue"]),
+        ("ball", ["tall", "fall", "hall"]),
+        ("bear", ["hair", "pair", "stare"]),
+        ("mice", ["dice", "rice", "nice"]),
+        ("town", ["brown", "crown", "down"]),
+        ("fly", ["sky", "try", "dry"]),
+        ("boat", ["coat", "goat", "float"]),
+        ("door", ["floor", "more", "store"]),
+        ("sheep", ["sleep", "deep", "keep"]),
+        ("rose", ["nose", "toes", "close"]),
+        ("snail", ["tail", "mail", "trail"]),
+        ("clock", ["sock", "rock", "knock"]),
+        ("spring", ["thing", "bring", "string"])
     ]
     private static let wordFamilies: [(String, [String], [String])] = [
         ("-at", ["cat", "hat", "bat", "mat"], ["dog", "cup", "pen"]),
         ("-ig", ["pig", "wig", "big", "dig"], ["pan", "bug", "cat"]),
         ("-op", ["top", "hop", "mop", "pop"], ["bat", "sun", "hen"]),
-        ("-un", ["sun", "run", "fun", "bun"], ["cat", "dog", "log"])
+        ("-un", ["sun", "run", "fun", "bun"], ["cat", "dog", "log"]),
+        ("-an", ["can", "man", "ran", "fan", "ban"], ["dog", "cup", "pen"]),
+        ("-in", ["bin", "fin", "pin", "win", "tin"], ["cat", "dog", "log"]),
+        ("-en", ["hen", "ten", "pen", "den", "men"], ["bat", "sun", "hop"]),
+        ("-og", ["log", "fog", "hog", "jog", "bog"], ["cat", "hat", "run"]),
+        ("-ug", ["bug", "hug", "mug", "rug", "tug"], ["hat", "pen", "log"]),
+        ("-ed", ["bed", "red", "fed", "led", "wed"], ["sun", "hop", "cat"]),
+        ("-ay", ["day", "say", "way", "pay", "hay"], ["dog", "cup", "ten"]),
+        ("-ow", ["bow", "cow", "how", "now", "wow"], ["cat", "pen", "log"]),
+        ("-ake", ["lake", "cake", "make", "take", "wake"], ["dog", "cup", "ten"]),
+        ("-ine", ["fine", "mine", "pine", "vine", "wine"], ["cat", "hat", "run"]),
+        ("-ock", ["dock", "lock", "mock", "rock", "sock"], ["bat", "sun", "hen"])
     ]
     private static let nouns = ["dog", "cat", "school", "book", "apple", "house", "happiness", "garden"]
     private static let verbs = ["jump", "run", "swim", "read", "eat", "sleep", "sing", "dance"]
@@ -805,7 +853,18 @@ enum CurriculumGenerator {
         ("happy", "joyful", ["angry", "tired"]),
         ("big", "huge", ["small", "tiny"]),
         ("fast", "quick", ["slow", "still"]),
-        ("smart", "clever", ["silly", "lazy"])
+        ("smart", "clever", ["silly", "lazy"]),
+        ("sad", "unhappy", ["joyful", "excited"]),
+        ("small", "tiny", ["huge", "giant"]),
+        ("cold", "chilly", ["warm", "hot"]),
+        ("brave", "courageous", ["scared", "timid"]),
+        ("tired", "exhausted", ["awake", "energetic"]),
+        ("funny", "hilarious", ["serious", "boring"]),
+        ("pretty", "beautiful", ["ugly", "plain"]),
+        ("angry", "furious", ["calm", "pleased"]),
+        ("old", "ancient", ["new", "modern"]),
+        ("clean", "spotless", ["dirty", "messy"]),
+        ("loud", "noisy", ["quiet", "silent"])
     ]
     /// Picture-vocabulary grouped by category so a word's distractors always
     /// come from the SAME category (e.g. matching "monkey" only shows other
@@ -980,8 +1039,8 @@ enum CurriculumGenerator {
         let pick = rhymePairs.randomElement(using: &rng) ?? ("cat", ["hat"])
         let target = pick.0
         let rhyme = pick.1.randomElement(using: &rng) ?? "hat"
-        let nonRhymes = ["dog", "sun", "fish", "tree", "book", "moon"].filter { !$0.hasSuffix(String(target.suffix(2))) }
-        var distractors = Array(nonRhymes.shuffled(using: &rng).prefix(2))
+        let nonRhymes = ["dog", "sun", "fish", "tree", "book", "moon", "cup", "pen", "hand", "star"].filter { !$0.hasSuffix(String(target.suffix(2))) }
+        var distractors = Array(nonRhymes.shuffled(using: &rng).prefix(3))
         var choices = ([rhyme] + distractors).shuffled(using: &rng)
         if !choices.contains(rhyme) { choices[0] = rhyme }
         return nq(subject: .english, skill: "rhyming", component: "Pattern Row", template: "Rhyming Words",
@@ -995,14 +1054,16 @@ enum CurriculumGenerator {
     private static func genVocab(band: GradeBand, rng: inout SeededRNG) -> NormalizedQuestion {
         if band == .grade2 || band == .grade3 {
             let pick = vocabSynonyms.randomElement(using: &rng) ?? ("happy", "joyful", ["angry", "tired"])
-            var choices = ([pick.1] + pick.2).shuffled(using: &rng)
+            let extraDistractors = ["weird", "strange", "normal", "empty", "full", "dark", "light", "wet", "dry"]
+            let extra = extraDistractors.filter { !pick.2.contains($0) && $0 != pick.1 }.shuffled(using: &rng).first ?? "odd"
+            var choices = ([pick.1] + pick.2 + [extra]).shuffled(using: &rng)
             if !choices.contains(pick.1) { choices[0] = pick.1 }
             return nq(subject: .english, skill: "vocabulary", component: "Choice Card Row", template: "Vocabulary Matching",
                       prompt: "Which word means the same as \(pick.0)?",
                       directions: "Choose the best synonym.",
                       source: "emotion_pack",
                       content: ["word": pick.0],
-                      choices: choices, correct: pick.1, grade: band)
+                      choices: Array(choices.prefix(4)), correct: pick.1, grade: band)
         }
         // Same-category distractors only — see `vocabCategories`.
         let category = vocabCategories.randomElement(using: &rng) ?? vocabCategories[0]
@@ -1046,11 +1107,13 @@ enum CurriculumGenerator {
         }
         let target = pool.randomElement(using: &rng) ?? "the"
         // Prefer look-alike distractors so the child must visually discriminate.
-        let distractors: [String]
+        var distractors: [String]
         if let confusable = sightWordConfusables[target] {
-            distractors = confusable
+            distractors = Array(confusable.prefix(2))
+            let extra = pool.filter { $0 != target && !distractors.contains($0) }.shuffled(using: &rng).first ?? "not"
+            distractors.append(extra)
         } else {
-            distractors = pool.filter { $0 != target }.shuffled(using: &rng).prefix(2).map { $0 }
+            distractors = pool.filter { $0 != target }.shuffled(using: &rng).prefix(3).map { $0 }
         }
         var choices = ([target] + distractors).shuffled(using: &rng)
         if !choices.contains(target) { choices[0] = target }
@@ -1060,7 +1123,7 @@ enum CurriculumGenerator {
                   directions: "Tap the word that completes the sentence.",
                   source: "sight_words_pack",
                   content: ["target": target, "sentence": sentence],
-                  choices: choices, correct: target, grade: band)
+                  choices: Array(choices.prefix(4)), correct: target, grade: band)
     }
 
     private static func genWordFamily(rng: inout SeededRNG) -> NormalizedQuestion {
@@ -1068,7 +1131,9 @@ enum CurriculumGenerator {
         let correct = pick.1.randomElement(using: &rng) ?? "cat"
         let other = pick.2.randomElement(using: &rng) ?? "dog"
         let other2 = pick.2.filter { $0 != other }.randomElement(using: &rng) ?? "sun"
-        var choices = [correct, other, other2].shuffled(using: &rng)
+        let extraPool = ["fox", "cup", "bed", "red", "box", "top", "wet", "sit", "hot", "nut"].filter { !pick.2.contains($0) && $0 != correct }
+        let other3 = extraPool.shuffled(using: &rng).first ?? "fox"
+        var choices = [correct, other, other2, other3].shuffled(using: &rng)
         if !choices.contains(correct) { choices[0] = correct }
         let pair = pick.1.filter { $0 != correct }.prefix(2).joined(separator: " and ")
         return nq(subject: .english, skill: "word families", component: "Pattern Row", template: "Word Families",
@@ -1089,10 +1154,15 @@ enum CurriculumGenerator {
         "A cow says moo.", "He ate the cake.", "The tree is tall.", "I can count ten.",
         "The duck is wet.", "We made a fort.", "My pen is red.", "The bee can buzz.",
         "She sang a song.", "The ant is small.", "We ran very fast.", "He found a rock.",
-        "The pig is pink.", "I drew a star."
+        "The pig is pink.", "I drew a star.",
+        "The cat sat on the mat.", "A big red ball rolled away.", "We saw three ducks at the park.",
+        "My dog loves to run and play.", "She found a bug under the rock.", "The baby bird fell from the nest.",
+        "He drew a sun with yellow crayon.", "I like to read before bed.", "The frog jumped into the pond.",
+        "We made cookies with grandma.", "A rainbow appeared after the rain.", "The puppy hid under the blanket.",
+        "She picked flowers in the garden.", "He splashed in every puddle.", "The kite flew high in the sky."
     ]
 
-    /// Longer Grade 3 sentences with an adjective or adverb for richer ordering.
+    /// Longer Grade 2/3 sentences with an adjective or adverb for richer ordering.
     private static let grade3Sentences: [String] = [
         "The big dog ran quickly.", "A small cat sat softly.", "The bright sun shines warmly.",
         "The happy boy jumped high.", "A tiny bird sang sweetly.", "The cold wind blew hard.",
@@ -1103,7 +1173,15 @@ enum CurriculumGenerator {
         "The hungry cat meowed loudly.", "A warm fire crackled softly.", "The clever fox hid quietly.",
         "The little duck swam slowly.", "A heavy rain poured down.", "The proud lion roared loudly.",
         "The sleepy baby yawned softly.", "A shiny coin rolled away.", "The strong horse galloped fast.",
-        "The gentle breeze felt cool.", "A bright kite flew high.", "The busy bee worked hard."
+        "The gentle breeze felt cool.", "A bright kite flew high.", "The busy bee worked hard.",
+        "The clever fox outsmarted the hunter.", "She studied hard and passed the test.",
+        "Lightning flashed across the dark sky.", "The ancient castle stood on a hill.",
+        "He carefully packed his camping gear.", "The scientist discovered a new planet.",
+        "Strong winds blew the leaves everywhere.", "She whispered a secret to her friend.",
+        "The hungry bear searched for berries.", "He finished the puzzle in record time.",
+        "The crowd cheered loudly for the team.", "She painted a portrait of her mother.",
+        "The river flooded after heavy rainfall.", "He memorized every word of the speech.",
+        "The explorers mapped uncharted territory."
     ]
 
     private static func genSentence(band: GradeBand, rng: inout SeededRNG) -> NormalizedQuestion {
@@ -1180,7 +1258,27 @@ enum CurriculumGenerator {
             ("We won the game", "!"),
             ("The cat is happy", "."),
             ("Look at the bird", "!"),
-            ("Is that your book", "?")
+            ("Is that your book", "?"),
+            ("The dog barks loudly", "."),
+            ("Did you eat breakfast", "?"),
+            ("Watch out for that car", "!"),
+            ("She reads every night", "."),
+            ("Can you help me please", "?"),
+            ("That was so exciting", "!"),
+            ("The sun sets in the west", "."),
+            ("Where did you put my book", "?"),
+            ("We scored the winning goal", "!"),
+            ("Birds fly south in winter", "."),
+            ("How do you spell that word", "?"),
+            ("I can not believe we won", "!"),
+            ("The library opens at nine", "."),
+            ("Have you seen my backpack", "?"),
+            ("Run as fast as you can", "!"),
+            ("Clouds are made of water drops", "."),
+            ("When does the movie start", "?"),
+            ("She finally found her keys", "!"),
+            ("Frogs live near ponds and lakes", "."),
+            ("Why is the sky blue", "?")
         ]
         let pick = pool.randomElement(using: &rng) ?? ("Where are you", "?")
         return nq(subject: .english, skill: "punctuation", component: "Sentence Strip", template: "Punctuation Choice",

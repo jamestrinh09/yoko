@@ -11,6 +11,7 @@ struct LearnView: View {
     @State private var path = NavigationPath()
 
     var body: some View {
+        @Bindable var store = store
         NavigationStack(path: $path) {
             let _ = hideDock = !path.isEmpty
             ZStack(alignment: .bottom) {
@@ -38,6 +39,13 @@ struct LearnView: View {
         }
         .onChange(of: path.isEmpty) { _, empty in
             hideDock = !empty
+        }
+        .fullScreenCover(item: $store.pendingLevelUp) { info in
+            LevelUpView(
+                subject: info.subject,
+                newLevel: info.newLevel,
+                onDismiss: { store.pendingLevelUp = nil }
+            )
         }
     }
 
@@ -139,6 +147,10 @@ struct LearnView: View {
 private struct SubjectRow: View {
     let progress: SubjectProgress
 
+    private var levelEmoji: String {
+        progress.currentLevel == 2 ? "🔥" : "👑"
+    }
+
     var body: some View {
         HStack(spacing: 14) {
             ZStack {
@@ -166,6 +178,18 @@ private struct SubjectRow: View {
                 .foregroundStyle(DS.Color.textTertiary)
         }
         .dsCard(padding: 16)
+        .overlay(alignment: .topTrailing) {
+            if progress.currentLevel >= 2 {
+                Text("Level \(progress.currentLevel) \(levelEmoji)")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(DS.Color.accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(DS.Color.accentSoft)
+                    .clipShape(.capsule)
+                    .offset(x: -8, y: 8)
+            }
+        }
     }
 }
 
