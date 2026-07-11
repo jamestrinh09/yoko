@@ -968,7 +968,7 @@ enum CurriculumGenerator {
         let missing = chars[hideIndex]
         let displayed = chars.enumerated().map { i, c in i == hideIndex ? "_" : c }.joined()
         let promptShown = chars.enumerated().map { i, c in i == hideIndex ? "_" : c }.joined(separator: " ")
-        var distractors = ["a", "o", "i", "e", "u"].filter { $0 != missing }.shuffled(using: &rng).prefix(2).map { $0 }
+        let distractors = ["a", "o", "i", "e", "u"].filter { $0 != missing }.shuffled(using: &rng).prefix(2).map { $0 }
         var choices = ([missing] + Array(distractors)).shuffled(using: &rng)
         if !choices.contains(missing) { choices[0] = missing }
         return nq(subject: .english, skill: "missing letter", component: "Blank Slot Builder", template: "Missing Letter",
@@ -1017,7 +1017,7 @@ enum CurriculumGenerator {
         }
         let pick = pool.randomElement(using: &rng) ?? ("dog", "🐶")
         let word = pick.0
-        var letters = Array(word).map { String($0) }
+        let letters = Array(word).map { String($0) }
         // Ensure shuffle doesn't equal original
         var attempts = 0
         var scrambled = letters
@@ -1040,7 +1040,7 @@ enum CurriculumGenerator {
         let target = pick.0
         let rhyme = pick.1.randomElement(using: &rng) ?? "hat"
         let nonRhymes = ["dog", "sun", "fish", "tree", "book", "moon", "cup", "pen", "hand", "star"].filter { !$0.hasSuffix(String(target.suffix(2))) }
-        var distractors = Array(nonRhymes.shuffled(using: &rng).prefix(3))
+        let distractors = Array(nonRhymes.shuffled(using: &rng).prefix(3))
         var choices = ([rhyme] + distractors).shuffled(using: &rng)
         if !choices.contains(rhyme) { choices[0] = rhyme }
         return nq(subject: .english, skill: "rhyming", component: "Pattern Row", template: "Rhyming Words",

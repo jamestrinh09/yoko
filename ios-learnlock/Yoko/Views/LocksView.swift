@@ -197,7 +197,9 @@ struct LocksView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             if let scene = UIApplication.shared.connectedScenes
                 .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-                SKStoreReviewController.requestReview(in: scene)
+                #if !targetEnvironment(simulator)
+                StoreKit.AppStore.requestReview(in: scene)
+                #endif
             }
         }
     }

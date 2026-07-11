@@ -5,7 +5,7 @@
 
 import SwiftUI
 import Observation
-import UserNotifications
+@preconcurrency import UserNotifications
 import DeviceActivity
 import ManagedSettings
 import FamilyControls
@@ -692,7 +692,6 @@ final class AppStore {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let startDate = calendar.date(byAdding: .day, value: -16, to: today)!
-        let yesterday = calendar.date(byAdding: .day, value: -1, to: today)!
 
         // ── Profile ──────────────────────────────────────────────
         profile.name = "James"

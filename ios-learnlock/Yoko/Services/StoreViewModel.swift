@@ -10,7 +10,7 @@
 import Foundation
 import Observation
 import RevenueCat
-import UserNotifications
+@preconcurrency import UserNotifications
 
 @Observable
 @MainActor

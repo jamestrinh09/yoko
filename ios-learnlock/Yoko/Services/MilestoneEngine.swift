@@ -10,7 +10,8 @@
 
 import Foundation
 
-nonisolated enum MilestoneEngine {
+@MainActor
+enum MilestoneEngine {
 
     // MARK: - Achievement catalog
 
