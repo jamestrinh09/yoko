@@ -1,4 +1,4 @@
-test_zngoQynpZIqqsxkzoXmSrSaLzP//
+//
 //  Config.swift
 //  Yoko
 //
