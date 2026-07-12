@@ -457,7 +457,7 @@ struct SettingsView: View {
         case .approved: return "Granted"
         case .denied: return "Denied"
         case .notDetermined: return "Set up"
-        @unknown default: return "—"
+        default: return "—"
         }
     }
 
@@ -491,7 +491,7 @@ struct SettingsView: View {
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 openURL(url)
             }
-        @unknown default:
+        default:
             break
         }
     }

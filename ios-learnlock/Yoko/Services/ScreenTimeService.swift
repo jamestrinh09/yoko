@@ -54,7 +54,7 @@ final class ScreenTimeService {
         case .approved: return "Connected"
         case .denied: return "Access denied"
         case .notDetermined: return "Not set up"
-        @unknown default: return "Unknown"
+        default: return "Unknown"
         }
     }
 

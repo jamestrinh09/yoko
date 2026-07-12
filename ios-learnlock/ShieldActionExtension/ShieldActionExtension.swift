@@ -31,7 +31,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             scheduleYokoNotificationAndDefer(completionHandler: completionHandler)
         case .secondaryButtonPressed:
             completionHandler(.defer)
-        @unknown default:
+        default:
             completionHandler(.defer)
         }
     }
@@ -42,7 +42,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             scheduleYokoNotificationAndDefer(completionHandler: completionHandler)
         case .secondaryButtonPressed:
             completionHandler(.defer)
-        @unknown default:
+        default:
             completionHandler(.defer)
         }
     }
@@ -53,7 +53,7 @@ class ShieldActionExtension: ShieldActionDelegate {
             scheduleYokoNotificationAndDefer(completionHandler: completionHandler)
         case .secondaryButtonPressed:
             completionHandler(.defer)
-        @unknown default:
+        default:
             completionHandler(.defer)
         }
     }
