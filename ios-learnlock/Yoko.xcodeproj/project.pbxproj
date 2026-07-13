@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7A99EE0142C0FFEE00DA000B /* AppUsageReportExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7A99EE0142C0FFEE00DA000B /* AppUsageReportExtension.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = 7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E9225F1A2FFCBC63000F8A23 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9225F192FFCBC62000F8A23 /* DeviceActivity.framework */; };
 		E9225F222FFCBC63000F8A23 /* DeviceActivityMonitorExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9225F172FFCBC62000F8A23 /* DeviceActivityMonitorExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E9225F2E2FFCBC93000F8A23 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9225F2D2FFCBC93000F8A23 /* ManagedSettings.framework */; };
@@ -65,6 +65,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		7A99EE0142C0FFEE00DA000A /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				7A99EE0142C0FFEE00DA000B /* AppUsageReportExtension.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9225F232FFCBC63000F8A23 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -74,7 +85,6 @@
 				E9225F382FFCBC93000F8A23 /* ShieldConfigurationExtension.appex in Embed Foundation Extensions */,
 				E9225F222FFCBC63000F8A23 /* DeviceActivityMonitorExtension.appex in Embed Foundation Extensions */,
 				E9225F4A2FFCBCBC000F8A23 /* ShieldActionExtension.appex in Embed Foundation Extensions */,
-				7A99EE0142C0FFEE00DA000B /* AppUsageReportExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -85,7 +95,7 @@
 		105FC57A2E9EAD3100EA8BCF /* Yoko.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yoko.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5892E9EAD3200EA8BCF /* YokoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YokoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		105FC5932E9EAD3200EA8BCF /* YokoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = YokoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = AppUsageReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A99EE0142C0FFEE00DA0002 /* AppUsageReportExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = AppUsageReportExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9225F172FFCBC62000F8A23 /* DeviceActivityMonitorExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DeviceActivityMonitorExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E9225F192FFCBC62000F8A23 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
 		E9225F2C2FFCBC93000F8A23 /* ShieldConfigurationExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShieldConfigurationExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -245,6 +255,7 @@
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
 				105FC5782E9EAD3100EA8BCF /* Resources */,
+				7A99EE0142C0FFEE00DA000A /* Embed ExtensionKit Extensions */,
 				E9225F232FFCBC63000F8A23 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
