@@ -211,16 +211,9 @@ private struct MockUsageRows: View {
                 .padding(.top, i == 0 ? 12 : 0)
                 .background(
                     GeometryReader { geo in
-                        LinearGradient(
-                            colors: [
-                                DS.Color.accent.opacity(0.85),
-                                DS.Color.accent.opacity(0.25),
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(width: geo.size.width * fillPercent)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        DS.Color.accent.opacity(0.15)
+                            .frame(width: geo.size.width * fillPercent)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 )
                 .clipShape(.rect(cornerRadius: 12))

@@ -28,7 +28,7 @@ struct LearnView: View {
                 }
                 startLearningButton
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 94)
+                    .padding(.bottom, 101)
             }
             .dsScreenBackground()
             .navigationDestination(for: Subject.self) { subject in

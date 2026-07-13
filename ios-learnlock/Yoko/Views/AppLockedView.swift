@@ -50,19 +50,18 @@ struct AppLockedView: View {
 
     var body: some View {
         ZStack {
-            DS.Color.background.ignoresSafeArea()
+            Color.white.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
 
                 VStack(spacing: 18) {
-                    Image("AppLockedHero")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 220, height: 220)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 64, weight: .bold))
+                        .foregroundStyle(DS.Color.accent)
                         .frame(maxWidth: .infinity)
 
-                    Text("app locked by Yoko")
+                    Text("app locked")
                         .font(.system(size: textSize, weight: .heavy, design: .rounded))
                         .foregroundStyle(DS.Color.textPrimary)
                         .multilineTextAlignment(.center)
@@ -81,17 +80,14 @@ struct AppLockedView: View {
 
                 Spacer(minLength: 0)
 
-                Button(action: handleCTA) {
-                    Text(ctaTitle)
-                }
-                .buttonStyle(DSPrimaryButtonStyle())
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
-                .opacity(appear ? 1 : 0)
-                .offset(y: appear ? 0 : 20)
+                PrimaryButton(label: ctaTitle, action: handleCTA)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
+                    .opacity(appear ? 1 : 0)
+                    .offset(y: appear ? 0 : 20)
+            }
         }
-        }
-        .iPadScaled { DS.Color.background }
+        .iPadScaled { Color.white }
         .onAppear {
             withAnimation(.spring(duration: 0.55, bounce: 0.3)) { appear = true }
         }

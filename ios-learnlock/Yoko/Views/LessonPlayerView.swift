@@ -133,9 +133,9 @@ struct LessonPlayerView: View {
 
             // Mascot centered in hero area
             mascotImage(urlString: mascotURL)
-                .frame(width: 162, height: 162)
+                .frame(width: mascotSize, height: mascotSize)
                 .padding(.top, -9)
-                .offset(y: -40)
+                .offset(y: -35)
                 .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
             // White content area with rounded top corners layered over hero (up 15pt)
@@ -147,7 +147,7 @@ struct LessonPlayerView: View {
         Button {
             dismiss()
         } label: {
-            Image(systemName: "xmark")
+            Image(systemName: "chevron.left")
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 36, height: 36)
@@ -332,6 +332,10 @@ struct LessonPlayerView: View {
         AnimatedGIFView(urlString: urlString)
     }
 
+    private var mascotSize: CGFloat {
+        feedback == .incorrect ? 154 : 162
+    }
+
     private var mascotURL: String {
         if showSummary {
             return wrongCount > lesson.questions.count / 2 ? GIFAssets.proud : GIFAssets.excited
@@ -358,7 +362,7 @@ struct LessonPlayerView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 18)
         }
-        .background(Color.white)
+        .background(.white)
     }
 
     // MARK: - Bottom Button
@@ -372,7 +376,6 @@ struct LessonPlayerView: View {
                 .padding(.vertical, 18)
                 .background(canSubmit ? DS.Color.accent : DS.Color.accent.opacity(0.28))
                 .clipShape(.rect(cornerRadius: 20))
-                .shadow(color: canSubmit ? DS.Color.accent.opacity(0.40) : Color.clear, radius: 18, y: 8)
         }
         .buttonStyle(.plain)
         .disabled(!canSubmit)

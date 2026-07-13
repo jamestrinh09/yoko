@@ -33,9 +33,9 @@ struct StreakCelebrationView: View {
                     .opacity(appear ? 1 : 0)
                 Spacer(minLength: 0)
                 continueButton
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 32)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
         }
         .ignoresSafeArea()
         .onAppear(perform: animateIn)

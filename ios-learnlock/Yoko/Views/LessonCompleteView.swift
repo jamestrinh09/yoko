@@ -63,7 +63,7 @@ struct LessonCompleteView: View {
                     AnimatedGIFView(urlString: mascotURL)
                         .frame(width: 162, height: 162)
                         .padding(.top, -9)
-                        .offset(y: -40)
+                        .offset(y: -35)
                         .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
                     card
                 }
@@ -256,7 +256,6 @@ struct LessonCompleteView: View {
                 .padding(.vertical, 18)
                 .background(DS.Color.accent)
                 .clipShape(.rect(cornerRadius: 20))
-                .shadow(color: DS.Color.accent.opacity(0.35), radius: 16, y: 8)
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 24)
