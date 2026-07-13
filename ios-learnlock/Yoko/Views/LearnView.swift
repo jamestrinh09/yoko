@@ -8,6 +8,7 @@ import SwiftUI
 struct LearnView: View {
     @Environment(AppStore.self) private var store
     @Binding var hideDock: Bool
+    @Binding var autoStartLesson: Lesson?
     @State private var path = NavigationPath()
 
     var body: some View {
@@ -39,6 +40,12 @@ struct LearnView: View {
         }
         .onChange(of: path.isEmpty) { _, empty in
             hideDock = !empty
+        }
+        .onChange(of: autoStartLesson) { _, lesson in
+            if let lesson {
+                path.append(lesson)
+                autoStartLesson = nil
+            }
         }
         .fullScreenCover(item: $store.pendingLevelUp) { info in
             LevelUpView(

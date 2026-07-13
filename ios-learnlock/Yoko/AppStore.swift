@@ -419,7 +419,13 @@ final class AppStore {
         let expiryDate = Date.now + TimeInterval(duration * 60)
         SharedState.unlockExpiryDate = expiryDate
 
-        // Start DeviceActivity monitoring schedule
+        // IMMEDIATELY remove shields — DeviceActivity scheduling is unreliable for
+        // instant unlocks because intervalDidStart fires at the schedule's start TIME,
+        // not when startMonitoring() is called.
+        screenTime.removeShieldsTemporarily()
+
+        // Start DeviceActivity monitoring for re-shielding when unlock expires.
+        // The intervalDidEnd callback will re-apply shields.
         let calendar = Calendar.current
         let now = Date()
         let startComponents = calendar.dateComponents([.hour, .minute, .second], from: now)
@@ -444,6 +450,58 @@ final class AppStore {
         let used = min(minutes, locks[idx].earnedMinutesAvailable, profile.earnedScreenTimeMinutes)
         locks[idx].earnedMinutesAvailable -= used
         profile.earnedScreenTimeMinutes -= used
+    }
+
+    /// Unlocks all shielded apps for the specified duration after lesson completion.
+    func unlockAllApps(minutes: Int, screenTime: ScreenTimeService) {
+        // Calculate unlock duration based on the global unlock rule
+        let duration: Int
+        switch unlockRule {
+        case "time":
+            duration = 30
+        case "daily":
+            let calendar = Calendar.current
+            let now = Date()
+            let midnight = calendar.startOfDay(for: calendar.date(byAdding: .day, value: 1, to: now)!)
+            duration = max(1, Int(midnight.timeIntervalSince(now) / 60))
+        default: // "session"
+            duration = 20
+        }
+
+        // Save current app tokens to SharedState for re-shielding later
+        let tokens = screenTime.selection.applicationTokens
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: tokens, requiringSecureCoding: true) {
+            SharedState.selectedAppTokensData = data
+        }
+
+        // Update shared state
+        SharedState.isUnlocked = true
+        let expiryDate = Date.now + TimeInterval(duration * 60)
+        SharedState.unlockExpiryDate = expiryDate
+
+        // IMMEDIATELY remove shields
+        screenTime.removeShieldsTemporarily()
+
+        // Start DeviceActivity monitoring for re-shielding when unlock expires
+        let calendar = Calendar.current
+        let now = Date()
+        let startComponents = calendar.dateComponents([.hour, .minute, .second], from: now)
+        let endComponents = calendar.dateComponents([.hour, .minute, .second], from: expiryDate)
+
+        let schedule = DeviceActivitySchedule(
+            intervalStart: startComponents,
+            intervalEnd: endComponents,
+            repeats: false
+        )
+
+        do {
+            try DeviceActivityCenter().startMonitoring(
+                DeviceActivityName("com.yoko.unlock"),
+                during: schedule
+            )
+        } catch {
+            print("Failed to start DeviceActivity monitoring: \(error)")
+        }
     }
 
     func stopUnlock() {
@@ -497,11 +555,12 @@ final class AppStore {
                 refillQueueIfNeeded(subjectIndex: i)
             }
         } else {
-            // No saved progress — generate fresh lessons at the new grade, starting at Level 1
+            // No saved progress — generate fresh lessons at the new grade, starting at Level 1.
+            // Clear ALL existing lessons (don't keep completed from old grade) and start fresh.
             for i in subjects.indices {
-                let completed = subjects[i].lessons.filter(\.completed)
                 let weak = subjects[i].weakSkills.compactMap { CurriculumSkill(rawValue: $0) }
-                let seed = subjects[i].generationCursor
+                // Reset cursor for a clean start at the new grade
+                let seed = UInt64(newGrade) &* 12345 &+ UInt64(subjects[i].subject.hashValue)
                 // Reset to Level 1 for a new grade
                 subjects[i].currentLevel = 1
                 subjects[i].lessonsCompletedThisLevel = 0
@@ -514,7 +573,8 @@ final class AppStore {
                     currentLevel: subjects[i].currentLevel,
                     weakSkills: weak
                 )
-                subjects[i].lessons = completed + fresh
+                // Start completely fresh — no old lessons carried over
+                subjects[i].lessons = fresh
                 subjects[i].generationCursor = seed &+ UInt64(queueTargetSize) &+ 7919
             }
         }

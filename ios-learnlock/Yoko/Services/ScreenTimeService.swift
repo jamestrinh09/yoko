@@ -105,6 +105,20 @@ final class ScreenTimeService {
         selection = FamilyActivitySelection()
     }
 
+    /// Temporarily removes all shields without clearing the selection.
+    /// Used to unlock apps after lesson completion.
+    func removeShieldsTemporarily() {
+        store.shield.applications = nil
+        store.shield.applicationCategories = nil
+        store.shield.webDomains = nil
+    }
+
+    /// Re-applies shields based on the current selection.
+    /// Called when unlock period expires.
+    func reapplyShields() {
+        applyShields()
+    }
+
     // MARK: - Persistence
 
     private func persistSelection() {

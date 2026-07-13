@@ -33,6 +33,7 @@ struct RootTabView: View {
     @Environment(AppStore.self) private var store
     @State private var selection: AppTab = .home
     @State private var hideDock: Bool = false
+    @State private var autoStartLesson: Lesson? = nil
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -41,7 +42,7 @@ struct RootTabView: View {
             Group {
                 switch selection {
                 case .home: HomeView(onOpenSettings: { selection = .settings })
-                case .learn: LearnView(hideDock: $hideDock)
+                case .learn: LearnView(hideDock: $hideDock, autoStartLesson: $autoStartLesson)
                 case .locks: LocksView()
                 case .rewards: RewardsView()
                 case .settings: SettingsView()
@@ -62,7 +63,20 @@ struct RootTabView: View {
         .animation(.spring(duration: 0.35), value: hideDock)
         .onChange(of: store.pendingLessonRedirect) { _, pending in
             if pending {
+                // Determine which subject to launch based on progress
+                let mathProgress = store.subject(.math)
+                let englishProgress = store.subject(.english)
+                let mathCompleted = mathProgress?.lessonsCompletedThisLevel ?? 0
+                let englishCompleted = englishProgress?.lessonsCompletedThisLevel ?? 0
+
+                // Pick the subject with fewer completed lessons (default to math if equal)
+                let targetSubject: Subject = englishCompleted < mathCompleted ? .english : .math
+                let targetProgress = store.subject(targetSubject)
+                let nextLesson = targetProgress?.lessons.first(where: { !$0.completed })
+                    ?? store.focusedNextLesson
+
                 selection = .learn
+                autoStartLesson = nextLesson
                 store.pendingLessonRedirect = false
             }
         }
