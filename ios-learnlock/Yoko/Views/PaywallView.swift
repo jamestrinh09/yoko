@@ -547,9 +547,9 @@ private struct PaywallPlanStep: View {
         HStack(alignment: .top, spacing: 14) {
             VStack(spacing: 4) {
                 ZStack {
-                    Circle().fill(DS.Color.accentSoft).frame(width: 38, height: 38)
+                    Circle().fill(DS.Color.accentSoft).frame(width: 42, height: 42)
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(DS.Color.accent)
                 }
                 if !isLast {
@@ -563,13 +563,14 @@ private struct PaywallPlanStep: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 16, weight: .heavy, design: .rounded))
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
                     .foregroundStyle(DS.Color.textPrimary)
                 Text(subtitle)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(DS.Color.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.vertical, 6)
             .padding(.bottom, isLast ? 0 : 18)
 
             Spacer(minLength: 0)

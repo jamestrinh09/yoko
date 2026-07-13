@@ -1434,6 +1434,7 @@ struct UnscrambleCard: View {
     @Binding var selectedAnswer: String?
     let isLocked: Bool
     @Bindable var state: UnscrambleState
+    @State private var isReady = false
 
     private var correctLetters: [String] { correctAnswer.map { String($0) } }
 
@@ -1464,8 +1465,11 @@ struct UnscrambleCard: View {
             state.correctCount = correctLetters.count
             state.picked = Array(repeating: -1, count: correctLetters.count)
             state.isLocked = isLocked
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isReady = true
+            }
         }
-        .onDisappear { state.active = false }
+        .onDisappear { state.active = false; isReady = false }
         .onChange(of: isLocked) { _, newValue in state.isLocked = newValue }
         .onChange(of: state.picked) { _, _ in
             let joined = state.picked.filter { $0 >= 0 }.map { letters[$0] }.joined()
@@ -1517,7 +1521,7 @@ struct UnscrambleCard: View {
         }()
 
         return Button {
-            guard !isLocked else { return }
+            guard isReady, !isLocked else { return }
             // If this chip is already used, find which slot it's in and clear that slot
             if isUsed {
                 if let slotIndex = state.picked.firstIndex(of: idx) {

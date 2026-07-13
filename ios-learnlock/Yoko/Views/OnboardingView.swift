@@ -38,6 +38,7 @@ struct OnboardingView: View {
     @State private var imageLoaded11 = false
     @State private var imageLoaded13 = false
     @State private var appGlow = false
+    @State private var showBubble = false
 
     private let totalSteps = 23
 
@@ -64,6 +65,7 @@ struct OnboardingView: View {
             imageLoaded3 = false
             imageLoaded11 = false
             imageLoaded13 = false
+            showBubble = false
         }
         .fullScreenCover(isPresented: $showPaywall) {
             PaywallFlowView(
@@ -450,6 +452,9 @@ struct OnboardingView: View {
         return VStack(spacing: 0) {
             mascotBubble(text: "Hi I'm Yoko")
                 .offset(y: 30)
+                .opacity(showBubble ? 1 : 0)
+                .scaleEffect(showBubble ? 1 : 0.8)
+                .animation(.spring(duration: 0.4, bounce: 0.3), value: showBubble)
             ZStack {
                 Circle()
                     .fill(DS.Color.accentSoft)
@@ -463,6 +468,9 @@ struct OnboardingView: View {
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     gifLoaded1 = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    showBubble = true
                 }
             }
         }
@@ -1397,19 +1405,7 @@ struct DemoQuestionScreen: View {
                         contentArea
                     }
 
-                    // Parent Demo tag + progress bar float over the hero
-                    VStack(spacing: 6) {
-                        Text("👋 Parent Demo")
-                            .font(.system(size: 12, weight: .heavy, design: .rounded))
-                            .foregroundStyle(DS.Color.accent)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 5)
-                            .background(DS.Color.accent.opacity(0.15))
-                            .clipShape(.capsule)
-                            .padding(.top, 8)
-
-                        topBar
-                    }
+                    topBar
                 }
                 .opacity(isReady ? 1 : 0)
                 .overlay(alignment: .topTrailing) {
