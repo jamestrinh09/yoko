@@ -365,7 +365,9 @@ struct OnboardingView: View {
         // Fresh purchase by a parent with no account yet → offer one-time sync
         // setup the first time they land on Home (handled by HomeView).
         store.pendingSyncSetupOffer = !account.isLinked
-        store.onboardingComplete = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            store.onboardingComplete = true
+        }
     }
 
     // MARK: - Existing-account sign-in flow
@@ -410,7 +412,9 @@ struct OnboardingView: View {
     /// data (which would overwrite the synced household snapshot).
     private func completeOnboardingViaLogin() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        store.onboardingComplete = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            store.onboardingComplete = true
+        }
     }
 
     private func requestNotificationsThenCompleteLogin() {
