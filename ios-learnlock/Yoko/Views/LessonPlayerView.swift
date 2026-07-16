@@ -37,6 +37,7 @@ struct LessonPlayerView: View {
     @State private var streakEligible: Bool = false
     @State private var unscramble = UnscrambleState()
     @State private var hint = QuestionHintState()
+    @State private var showingExplanation = false
 
     enum Feedback { case none, correct, incorrect }
 
@@ -131,16 +132,51 @@ struct LessonPlayerView: View {
             .padding(.horizontal, 20)
             .padding(.top, screenHeight * 0.06)
 
-            // Mascot centered in hero area
-            mascotImage(urlString: mascotURL)
-                .frame(width: mascotSize, height: mascotSize)
+            // Mascot hero area with optional explanation bubble
+            heroArea
                 .padding(.top, -9)
                 .offset(y: -35)
-                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
             // White content area with rounded top corners layered over hero (up 15pt)
             contentArea
         }
+    }
+
+    // MARK: - Hero Area with Explanation
+
+    private var heroArea: some View {
+        ZStack {
+            if showingExplanation {
+                explanationHero
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            } else {
+                mascotImage(urlString: mascotURL)
+                    .frame(width: mascotSize, height: mascotSize)
+                    .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.spring(duration: 0.3), value: showingExplanation)
+    }
+
+    private var explanationHero: some View {
+        HStack(alignment: .center, spacing: 12) {
+            mascotImage(urlString: GIFAssets.glasses)
+                .frame(width: mascotSize, height: mascotSize)
+                .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+
+            ExplanationBubble(text: explanationText)
+                .frame(maxWidth: 180)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+    }
+
+    private var explanationText: String {
+        guard let normalized = question.normalized else {
+            return QuestionExplanations.text(for: "")
+        }
+        return QuestionExplanations.text(for: normalized.templateType)
     }
 
     private var closeButton: some View {
@@ -272,8 +308,10 @@ struct LessonPlayerView: View {
         .frame(maxWidth: .infinity)
         .overlay {
             HStack(spacing: 0) {
+                explanationButton
                 if unscramble.active {
                     UnscrambleBackButton(state: unscramble)
+                        .padding(.leading, 8)
                 }
                 Spacer(minLength: 0)
                 // Hint buttons only surface once armed (after 5s on the question).
@@ -288,6 +326,34 @@ struct LessonPlayerView: View {
         .animation(.spring(duration: 0.3), value: unscramble.hintAvailable)
         .animation(.spring(duration: 0.3), value: hint.active)
         .animation(.spring(duration: 0.3), value: hint.available)
+        .animation(.spring(duration: 0.3), value: showingExplanation)
+    }
+
+    private var explanationButton: some View {
+        Button {
+            withAnimation(.spring(duration: 0.3)) {
+                showingExplanation.toggle()
+            }
+        } label: {
+            Image(systemName: "questionmark")
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundStyle(.white)
+                .frame(width: 36, height: 36)
+                .background(
+                    showingExplanation
+                        ? DS.Color.accent
+                        : Color(red: 1.0, green: 0.78, blue: 0.10)
+                )
+                .clipShape(Circle())
+                .shadow(
+                    color: showingExplanation
+                        ? DS.Color.accent.opacity(0.25)
+                        : Color.yellow.opacity(0.25),
+                    radius: 6,
+                    y: 2
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -420,6 +486,12 @@ struct LessonPlayerView: View {
     }
 
     private func evaluate() {
+        // Dismiss explanation before showing answer feedback
+        if showingExplanation {
+            withAnimation(.spring(duration: 0.25)) {
+                showingExplanation = false
+            }
+        }
         let isCorrect: Bool
         if let normalized = question.normalized, let selectedAnswer {
             isCorrect = selectedAnswer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized.correctAnswer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -476,6 +548,7 @@ struct LessonPlayerView: View {
                 matchSelections = [:]
                 matchPicked = nil
                 keyGlow = false
+                showingExplanation = false
             }
         } else {
             let outcome = store.completeLesson(lesson, correctCount: correctCount)
@@ -618,5 +691,61 @@ private struct SeededGenerator: RandomNumberGenerator {
         state ^= state >> 7
         state ^= state << 17
         return state
+    }
+}
+
+// MARK: - Explanation Bubble
+
+struct ExplanationBubble: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 16, weight: .semibold, design: .rounded))
+            .foregroundStyle(DS.Color.textPrimary)
+            .lineSpacing(3)
+            .multilineTextAlignment(.leading)
+            .padding(14)
+            .background(
+                SpeechBubbleShape(tailOnLeft: true)
+                    .fill(Color.white)
+                    .shadow(color: .black.opacity(0.10), radius: 8, x: 0, y: 4)
+            )
+    }
+}
+
+struct SpeechBubbleShape: Shape {
+    var tailOnLeft: Bool = true
+    var cornerRadius: CGFloat = 18
+    var tailWidth: CGFloat = 12
+    var tailHeight: CGFloat = 10
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        let tailX: CGFloat = tailOnLeft ? 0 : rect.maxX
+        let tailY: CGFloat = rect.midY - tailHeight / 2
+
+        let bodyRect = CGRect(
+            x: tailOnLeft ? tailWidth : 0,
+            y: 0,
+            width: rect.width - tailWidth,
+            height: rect.height
+        )
+
+        path.addRoundedRect(in: bodyRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
+
+        if tailOnLeft {
+            path.move(to: CGPoint(x: bodyRect.minX, y: tailY))
+            path.addLine(to: CGPoint(x: tailX, y: rect.midY))
+            path.addLine(to: CGPoint(x: bodyRect.minX, y: tailY + tailHeight))
+        } else {
+            path.move(to: CGPoint(x: bodyRect.maxX, y: tailY))
+            path.addLine(to: CGPoint(x: tailX, y: rect.midY))
+            path.addLine(to: CGPoint(x: bodyRect.maxX, y: tailY + tailHeight))
+        }
+        path.closeSubpath()
+
+        return path
     }
 }

@@ -34,6 +34,13 @@
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
 			remoteInfo = Yoko;
 		};
+		7A99EE0142C0FFEE00DA000C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7A99EE0142C0FFEE00DA0001;
+			remoteInfo = AppUsageReportExtension;
+		};
 		E9225F202FFCBC63000F8A23 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
@@ -54,13 +61,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = E9225F402FFCBCBC000F8A23;
 			remoteInfo = ShieldActionExtension;
-		};
-		7A99EE0142C0FFEE00DA000C /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 7A99EE0142C0FFEE00DA0001;
-			remoteInfo = AppUsageReportExtension;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -591,6 +591,11 @@
 			target = 105FC5792E9EAD3100EA8BCF /* Yoko */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
+		7A99EE0142C0FFEE00DA000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */;
+			targetProxy = 7A99EE0142C0FFEE00DA000C /* PBXContainerItemProxy */;
+		};
 		E9225F212FFCBC63000F8A23 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = E9225F162FFCBC62000F8A23 /* DeviceActivityMonitorExtension */;
@@ -605,11 +610,6 @@
 			isa = PBXTargetDependency;
 			target = E9225F402FFCBCBC000F8A23 /* ShieldActionExtension */;
 			targetProxy = E9225F482FFCBCBC000F8A23 /* PBXContainerItemProxy */;
-		};
-		7A99EE0142C0FFEE00DA000D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 7A99EE0142C0FFEE00DA0001 /* AppUsageReportExtension */;
-			targetProxy = 7A99EE0142C0FFEE00DA000C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
