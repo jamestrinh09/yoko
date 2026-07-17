@@ -39,6 +39,8 @@ struct OnboardingView: View {
     @State private var imageLoaded13 = false
     @State private var appGlow = false
     @State private var showBubble = false
+    /// Tracks whether paywall dismissal should finalize onboarding (vs login flow).
+    @State private var paywallCompletingOnboarding = false
 
     private let totalSteps = 23
 
@@ -67,7 +69,12 @@ struct OnboardingView: View {
             imageLoaded13 = false
             showBubble = false
         }
-        .fullScreenCover(isPresented: $showPaywall) {
+        .fullScreenCover(isPresented: $showPaywall, onDismiss: {
+            if paywallCompletingOnboarding {
+                store.onboardingComplete = true
+                paywallCompletingOnboarding = false
+            }
+        }) {
             PaywallFlowView(
                 childName: childName,
                 store: storeVM,
@@ -76,8 +83,9 @@ struct OnboardingView: View {
                 onComplete: {
                     // The paywall is now the final gate (shown after the commitment
                     // step). Completing it finishes onboarding and swaps to the app.
-                    showPaywall = false
                     completeOnboarding()
+                    paywallCompletingOnboarding = true
+                    showPaywall = false
                 },
                 onLogin: {
                     // An existing parent signed in via the paywall fallback chip:
@@ -365,9 +373,8 @@ struct OnboardingView: View {
         // Fresh purchase by a parent with no account yet → offer one-time sync
         // setup the first time they land on Home (handled by HomeView).
         store.pendingSyncSetupOffer = !account.isLinked
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            store.onboardingComplete = true
-        }
+        // onboardingComplete is set by the fullScreenCover's onDismiss callback
+        // to tie the state change to the actual system dismissal event.
     }
 
     // MARK: - Existing-account sign-in flow
@@ -412,9 +419,7 @@ struct OnboardingView: View {
     /// data (which would overwrite the synced household snapshot).
     private func completeOnboardingViaLogin() {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            store.onboardingComplete = true
-        }
+        store.onboardingComplete = true
     }
 
     private func requestNotificationsThenCompleteLogin() {
