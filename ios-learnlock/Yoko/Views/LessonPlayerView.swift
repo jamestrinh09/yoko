@@ -176,7 +176,16 @@ struct LessonPlayerView: View {
         guard let normalized = question.normalized else {
             return QuestionExplanations.text(for: "")
         }
-        return QuestionExplanations.text(for: normalized.templateType)
+        let buckets = (normalized.questionContent["buckets"] ?? "")
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+        let equation = normalized.questionContent["equation"] ?? ""
+        return QuestionExplanations.text(
+            for: normalized.templateType,
+            buckets: buckets,
+            choices: normalized.answerChoices,
+            equation: equation
+        )
     }
 
     private var closeButton: some View {
