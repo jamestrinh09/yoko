@@ -1362,16 +1362,14 @@ struct UnscrambleBackButton: View {
     @Bindable var state: UnscrambleState
 
     private var hasFilledSlots: Bool {
-        state.picked.contains { $0 >= 0 }
+        !state.picked.isEmpty
     }
 
     var body: some View {
         Button {
             guard !state.isLocked, hasFilledSlots else { return }
-            // Find the last filled slot and clear it
-            if let lastFilledIndex = state.picked.lastIndex(where: { $0 >= 0 }) {
-                withAnimation(.spring(duration: 0.2)) { state.picked[lastFilledIndex] = -1 }
-            }
+            // Remove the last placed letter
+            withAnimation(.spring(duration: 0.2)) { _ = state.picked.popLast() }
         } label: {
             Image(systemName: "delete.left.fill")
                 .font(.system(size: 18, weight: .heavy))
@@ -1457,13 +1455,11 @@ struct UnscrambleCard: View {
                 .frame(maxWidth: .infinity)
         }
         .onAppear {
-            // Activeness + the 5s hint arming are owned by the renderer's
-            // `configureHint()` so the button survives card reuse between
-            // consecutive unscramble questions. Here we only seed the tray.
+            guard !state.active else { return }
             state.active = true
             state.letters = letters
             state.correctCount = correctLetters.count
-            state.picked = Array(repeating: -1, count: correctLetters.count)
+            state.picked = []
             state.isLocked = isLocked
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 isReady = true
@@ -1471,19 +1467,19 @@ struct UnscrambleCard: View {
         }
         .onDisappear { state.active = false; isReady = false }
         .onChange(of: isLocked) { _, newValue in state.isLocked = newValue }
-        .onChange(of: state.picked) { _, _ in
-            let joined = state.picked.filter { $0 >= 0 }.map { letters[$0] }.joined()
+        .onChange(of: state.picked) { _, newValue in
+            let joined = newValue.map { letters[$0] }.joined()
             selectedAnswer = joined.isEmpty ? nil : joined
         }
     }
 
     private func slotView(at i: Int) -> some View {
-        let hasLetter = i < state.picked.count && state.picked[i] >= 0
-        let letter = hasLetter ? letters[state.picked[i]] : nil
-        return Button {
-            guard !isLocked, hasLetter else { return }
-            withAnimation(.spring(duration: 0.2)) { state.picked[i] = -1 }
+        Button {
+            guard !isLocked, i < state.picked.count else { return }
+            withAnimation(.spring(duration: 0.2)) { state.picked.remove(at: i) }
         } label: {
+            let hasLetter = i < state.picked.count
+            let letter = hasLetter ? letters[state.picked[i]] : nil
             // Letter sits on top of a simple underline — no card, no orange border.
             VStack(spacing: 6) {
                 Text(letter ?? " ")
@@ -1497,7 +1493,7 @@ struct UnscrambleCard: View {
             .frame(width: 42)
         }
         .buttonStyle(.plain)
-        .disabled(!hasLetter || isLocked)
+        .disabled(isLocked)
     }
 
     private var chipsView: some View {
@@ -1514,26 +1510,20 @@ struct UnscrambleCard: View {
     }
 
     private func chipView(idx: Int, letter: String) -> some View {
-        let isUsed = state.picked.contains(idx)
-        let hintNumber: Int? = {
-            guard state.hintRevealed, !isUsed else { return nil }
-            return (correctLetters.firstIndex(of: letter)).map { $0 + 1 }
-        }()
-
-        return Button {
-            guard isReady, !isLocked else { return }
-            // If this chip is already used, find which slot it's in and clear that slot
-            if isUsed {
-                if let slotIndex = state.picked.firstIndex(of: idx) {
-                    withAnimation(.spring(duration: 0.2)) { state.picked[slotIndex] = -1 }
-                }
+        Button {
+            guard !isLocked else { return }
+            if let pos = state.picked.firstIndex(of: idx) {
+                withAnimation(.spring(duration: 0.2)) { state.picked.remove(at: pos) }
                 return
             }
-            // Find the first empty slot (-1) and fill it
-            if let emptySlot = state.picked.firstIndex(of: -1) {
-                withAnimation(.spring(duration: 0.2)) { state.picked[emptySlot] = idx }
-            }
+            guard state.picked.count < correctLetters.count else { return }
+            withAnimation(.spring(duration: 0.2)) { state.picked.append(idx) }
         } label: {
+            let isUsed = state.picked.contains(idx)
+            let hintNumber: Int? = {
+                guard state.hintRevealed, !isUsed else { return nil }
+                return (correctLetters.firstIndex(of: letter)).map { $0 + 1 }
+            }()
             ZStack(alignment: .topTrailing) {
                 Text(letter)
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
@@ -1564,6 +1554,7 @@ struct UnscrambleCard: View {
             }
         }
         .buttonStyle(.plain)
+        .disabled(isLocked)
     }
 }
 

@@ -1354,8 +1354,13 @@ struct DemoQuestionScreen: View {
     @State private var hint = QuestionHintState()
     @State private var contentOpacity: Double = 1
     @State private var hintTimerTask: Task<Void, Never>?
+    @State private var showingExplanation = false
 
     enum DemoMascotMood { case happy, thinking, determined, excited, sad }
+
+    private var explanationText: String {
+        QuestionExplanations.text(for: normalized.templateType)
+    }
 
     private var question: Question {
         if let idx = normalized.answerChoices.firstIndex(of: normalized.correctAnswer) {
@@ -1406,10 +1411,9 @@ struct DemoQuestionScreen: View {
                         // the hero region is exactly the same size in both.
                         Color.clear.frame(height: screenHeight * 0.06 + 36)
 
-                        MascotGIF(url: mascotURL, size: 162)
+                        heroArea
                             .padding(.top, -9)
                             .offset(y: -35)
-                            .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
 
                         contentArea
                     }
@@ -1532,6 +1536,7 @@ struct DemoQuestionScreen: View {
         feedback = .none
         unscramble = UnscrambleState()
         mascotMood = initialMood()
+        showingExplanation = false
         contentOpacity = 0
         withAnimation(.easeIn(duration: 0.3)) { contentOpacity = 1 }
         armHintAfterDelay()
@@ -1544,6 +1549,28 @@ struct DemoQuestionScreen: View {
         case 3: return .determined
         default: return .happy
         }
+    }
+
+    private var heroArea: some View {
+        ZStack {
+            if showingExplanation {
+                HStack(alignment: .center, spacing: 12) {
+                    MascotGIF(url: GIFAssets.glasses, size: 162)
+                        .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+
+                    ExplanationBubble(text: explanationText)
+                        .frame(maxWidth: 180)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            } else {
+                MascotGIF(url: mascotURL, size: 162)
+                    .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 6)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.spring(duration: 0.3), value: showingExplanation)
     }
 
     private var splitBackground: some View {
@@ -1620,6 +1647,12 @@ struct DemoQuestionScreen: View {
     }
 
     private func evaluate() {
+        // Dismiss explanation before showing answer feedback
+        if showingExplanation {
+            withAnimation(.spring(duration: 0.25)) {
+                showingExplanation = false
+            }
+        }
         let correct = isCorrectPick
         withAnimation(.spring(duration: 0.35)) {
             feedback = correct ? .correct : .incorrect
@@ -1655,22 +1688,53 @@ struct DemoQuestionScreen: View {
         .frame(maxWidth: .infinity)
         .overlay {
             HStack(spacing: 0) {
+                demoExplanationButton
                 if unscramble.active {
                     UnscrambleBackButton(state: unscramble)
+                        .padding(.leading, 8)
                 }
                 Spacer(minLength: 0)
-                // Hint buttons only surface once armed (after 5s on the question).
+                // Unscramble hint (reveals letter order) shown after 5s on the question.
                 if unscramble.active && unscramble.hintAvailable {
                     UnscrambleHintButton(state: unscramble)
-                } else if hint.active && hint.available {
-                    QuestionHintButton(state: hint)
                 }
             }
         }
         .animation(.spring(duration: 0.3), value: unscramble.active)
         .animation(.spring(duration: 0.3), value: unscramble.hintAvailable)
-        .animation(.spring(duration: 0.3), value: hint.active)
-        .animation(.spring(duration: 0.3), value: hint.available)
+        .animation(.spring(duration: 0.3), value: showingExplanation)
+    }
+
+    private var demoExplanationButton: some View {
+        Button {
+            withAnimation(.spring(duration: 0.3)) {
+                showingExplanation.toggle()
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 11, weight: .heavy))
+                Text("Hint!")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
+            .background(
+                showingExplanation
+                    ? DS.Color.accent
+                    : Color(red: 1.0, green: 0.78, blue: 0.10)
+            )
+            .clipShape(.capsule)
+            .shadow(
+                color: showingExplanation
+                    ? DS.Color.accent.opacity(0.25)
+                    : Color.yellow.opacity(0.25),
+                radius: 6,
+                y: 2
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -1711,7 +1775,7 @@ struct DemoQuestionScreen: View {
     private var bottomButton: some View {
         let template = normalized.templateType.snakeKey
         let isUnscrambleComplete = template == "unscramble_word" &&
-            (unscramble.picked.filter { $0 >= 0 }.count >= unscramble.correctCount)
+            unscramble.picked.count >= unscramble.correctCount
         let canContinue = feedback == .correct || isUnscrambleComplete
         return Button(action: {
             if canContinue { onContinue() }

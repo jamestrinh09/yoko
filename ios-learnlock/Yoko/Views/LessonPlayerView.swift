@@ -314,11 +314,9 @@ struct LessonPlayerView: View {
                         .padding(.leading, 8)
                 }
                 Spacer(minLength: 0)
-                // Hint buttons only surface once armed (after 5s on the question).
+                // Unscramble hint (reveals letter order) shown after 5s on the question.
                 if unscramble.active && unscramble.hintAvailable {
                     UnscrambleHintButton(state: unscramble)
-                } else if hint.active && hint.available {
-                    QuestionHintButton(state: hint)
                 }
             }
         }
@@ -335,23 +333,28 @@ struct LessonPlayerView: View {
                 showingExplanation.toggle()
             }
         } label: {
-            Image(systemName: "questionmark")
-                .font(.system(size: 14, weight: .heavy))
-                .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .background(
-                    showingExplanation
-                        ? DS.Color.accent
-                        : Color(red: 1.0, green: 0.78, blue: 0.10)
-                )
-                .clipShape(Circle())
-                .shadow(
-                    color: showingExplanation
-                        ? DS.Color.accent.opacity(0.25)
-                        : Color.yellow.opacity(0.25),
-                    radius: 6,
-                    y: 2
-                )
+            HStack(spacing: 5) {
+                Image(systemName: "lightbulb.fill")
+                    .font(.system(size: 11, weight: .heavy))
+                Text("Hint!")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 8)
+            .background(
+                showingExplanation
+                    ? DS.Color.accent
+                    : Color(red: 1.0, green: 0.78, blue: 0.10)
+            )
+            .clipShape(.capsule)
+            .shadow(
+                color: showingExplanation
+                    ? DS.Color.accent.opacity(0.25)
+                    : Color.yellow.opacity(0.25),
+                radius: 6,
+                y: 2
+            )
         }
         .buttonStyle(.plain)
     }
