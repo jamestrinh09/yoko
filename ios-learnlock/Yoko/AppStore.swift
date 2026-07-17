@@ -850,7 +850,7 @@ final class AppStore {
 
 // MARK: - Level-up info
 
-struct LevelUpInfo: Identifiable {
+struct LevelUpInfo: Identifiable, Equatable, Hashable {
     let subject: Subject
     let newLevel: Int
     var id: String { "\(subject.rawValue)-\(newLevel)" }
