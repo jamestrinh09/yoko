@@ -47,6 +47,9 @@ struct AppUsageCard: View {
                 .stroke(DS.Color.border, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.04), radius: 12, x: 0, y: 6)
+        .onAppear {
+            screenTime.refreshStatus()
+        }
     }
 
     // MARK: Header
@@ -98,15 +101,11 @@ struct AppUsageCard: View {
 
     @ViewBuilder
     private var content: some View {
-        if screenTime.isAuthorized {
-            if store.demoDataActive {
-                MockUsageRows(selectedTimeframe: selectedTimeframe)
-            } else {
-                DeviceActivityReport(context, filter: filter)
-                    .frame(height: 196)
-            }
-        } else if store.demoDataActive {
+        if store.demoDataActive {
             MockUsageRows(selectedTimeframe: selectedTimeframe)
+        } else if screenTime.isAuthorized {
+            DeviceActivityReport(context, filter: safeFilter)
+                .frame(height: 196)
         } else {
             unauthorizedPlaceholder
         }
@@ -128,11 +127,23 @@ struct AppUsageCard: View {
 
     // MARK: Filter
 
-    /// Reuses the same app selection persisted for the Active Locks feature.
-    private var filter: DeviceActivityFilter {
+    /// Safe filter that only accesses Screen Time tokens when authorized.
+    /// Accessing applicationTokens before authorization can crash on some OS versions.
+    private var safeFilter: DeviceActivityFilter {
+        guard screenTime.isAuthorized else {
+            return DeviceActivityFilter(
+                segment: .daily(during: DateInterval(start: Date(), duration: 86_400)),
+                users: .all,
+                devices: .init([.iPhone, .iPad])
+            )
+        }
+        return makeFilter(with: screenTime.selection.applicationTokens)
+    }
+
+    /// Builds a filter for the selected timeframe with the given app tokens.
+    private func makeFilter(with apps: Set<ApplicationToken>) -> DeviceActivityFilter {
         let calendar = Calendar.current
         let now = Date()
-        let apps = screenTime.selection.applicationTokens
 
         switch selectedTimeframe {
         case .today:
