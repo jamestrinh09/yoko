@@ -13,7 +13,6 @@ struct OnboardingView: View {
     @Environment(StoreViewModel.self) private var storeVM
     @Environment(ParentAccountService.self) private var account
     @State private var step: Int = 1
-    @State private var showPaywall: Bool = false
     /// Sign-in / device-role flow state for an existing parent linking a 2nd device.
     @State private var showLoginSheet: Bool = false
     @State private var showRoleQuestion: Bool = false
@@ -39,10 +38,7 @@ struct OnboardingView: View {
     @State private var imageLoaded13 = false
     @State private var appGlow = false
     @State private var showBubble = false
-    /// Tracks whether paywall dismissal should finalize onboarding (vs login flow).
-    @State private var paywallCompletingOnboarding = false
-
-    private let totalSteps = 23
+    private let totalSteps = 24
 
     /// Where the device-role question was triggered from, controlling what happens
     /// after the parent picks who's using the device.
@@ -50,7 +46,9 @@ struct OnboardingView: View {
 
     var body: some View {
         Group {
-            if step == 23 {
+            if step == 24 {
+                paywallStep
+            } else if step == 23 {
                 commitmentScreen
                     .iPadScaled { DS.Color.background }
             } else if isDemoQuestionStep {
@@ -68,37 +66,6 @@ struct OnboardingView: View {
             imageLoaded11 = false
             imageLoaded13 = false
             showBubble = false
-        }
-        .fullScreenCover(isPresented: $showPaywall, onDismiss: {
-            if paywallCompletingOnboarding {
-                store.onboardingComplete = true
-                paywallCompletingOnboarding = false
-            }
-        }) {
-            PaywallFlowView(
-                childName: childName,
-                store: storeVM,
-                account: account,
-                appStore: store,
-                onComplete: {
-                    // The paywall is now the final gate (shown after the commitment
-                    // step). Completing it finishes onboarding and swaps to the app.
-                    completeOnboarding()
-                    paywallCompletingOnboarding = true
-                    showPaywall = false
-                },
-                onLogin: {
-                    // An existing parent signed in via the paywall fallback chip:
-                    // their synced data was already pulled & applied. Ask the same
-                    // device-role question, then drop them into the app.
-                    showPaywall = false
-                    roleQuestionContext = .paywallFallback
-                    Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(400))
-                        showRoleQuestion = true
-                    }
-                }
-            )
         }
         // Existing-account sign-in, reusing the paywall's sign-in sheet.
         .sheet(isPresented: $showLoginSheet) {
@@ -126,7 +93,34 @@ struct OnboardingView: View {
             onBack: {
                 withAnimation(.spring(duration: 0.3)) { step = max(1, step - 1) }
             },
-            onComplete: presentPaywall
+            onComplete: nextStep
+        )
+    }
+
+    // MARK: - Paywall Step (step 24)
+
+    private var paywallStep: some View {
+        PaywallFlowView(
+            childName: childName,
+            store: storeVM,
+            account: account,
+            appStore: store,
+            onComplete: {
+                // Complete onboarding and swap to the app. No cover dismissal race
+                // — this is a direct state change within the step-based flow.
+                completeOnboarding()
+                store.onboardingComplete = true
+            },
+            onLogin: {
+                // An existing parent signed in via the paywall fallback chip:
+                // their synced data was already pulled & applied. Ask the same
+                // device-role question, then drop them into the app.
+                roleQuestionContext = .paywallFallback
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(400))
+                    showRoleQuestion = true
+                }
+            }
         )
     }
 
@@ -345,13 +339,6 @@ struct OnboardingView: View {
         }
     }
 
-    /// Presents the 3-step subscription paywall as the final onboarding gate,
-    /// right after the commitment step. On success the paywall finishes onboarding.
-    private func presentPaywall() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        showPaywall = true
-    }
-
     private func validateAndNext4() {
         if childName.trimmingCharacters(in: .whitespaces).isEmpty {
             nameError = "Please enter your child's name"
@@ -373,8 +360,6 @@ struct OnboardingView: View {
         // Fresh purchase by a parent with no account yet → offer one-time sync
         // setup the first time they land on Home (handled by HomeView).
         store.pendingSyncSetupOffer = !account.isLinked
-        // onboardingComplete is set by the fullScreenCover's onDismiss callback
-        // to tie the state change to the actual system dismissal event.
     }
 
     // MARK: - Existing-account sign-in flow
